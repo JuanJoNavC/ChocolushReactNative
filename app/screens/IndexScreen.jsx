@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, Pressable, ScrollView, Dimensions, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Image, Pressable, ScrollView, Dimensions, Animated, Easing, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { FontAwesome, Ionicons } from '@expo/vector-icons'; // For icons
 
@@ -165,6 +165,7 @@ const NavBarComponent = ({ isScrolled }) => { // Receive isScrolled as prop
 
 const IndexScreen = () => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const currentYear = new Date().getFullYear(); // For the footer copyright
 
   const handleScroll = (event) => {
     const scrollY = event.nativeEvent.contentOffset.y;
@@ -309,9 +310,70 @@ const IndexScreen = () => {
             </View>
           </View>
         </View>
-        {/* Footer Component Content */}
-        <View style={footerStyles.footerContainer}>
-            <Text style={footerStyles.footerText}>© 2025 Chocolush. Todos los derechos reservados.</Text>
+        
+        {/* NEW FOOTER CONTENT */}
+        <View style={footerStyles.mainFooter}>
+            <View style={footerStyles.footerContentWrapper}>
+                <View style={footerStyles.footerTopSection}>
+                    <View style={footerStyles.footerBrand}>
+                        <Image source={ChocoLushLogo} style={footerStyles.footerLogo} />
+                        <View style={footerStyles.socialIcons}>
+                            <Pressable onPress={() => Linking.openURL('https://twitter.com')} style={({ pressed }) => [footerStyles.socialIconLink, pressed && footerStyles.socialIconLinkPressed]} aria-label="Twitter">
+                                <FontAwesome name="twitter" size={width <= 480 ? 20 : 24} color="#A65300" />
+                            </Pressable>
+                            <Pressable onPress={() => Linking.openURL('https://instagram.com')} style={({ pressed }) => [footerStyles.socialIconLink, pressed && footerStyles.socialIconLinkPressed]} aria-label="Instagram">
+                                <FontAwesome name="instagram" size={width <= 480 ? 20 : 24} color="#A65300" />
+                            </Pressable>
+                            <Pressable onPress={() => Linking.openURL('https://facebook.com')} style={({ pressed }) => [footerStyles.socialIconLink, pressed && footerStyles.socialIconLinkPressed]} aria-label="Facebook">
+                                <FontAwesome name="facebook-f" size={width <= 480 ? 20 : 24} color="#A65300" />
+                            </Pressable>
+                        </View>
+                    </View>
+
+                    <View style={footerStyles.footerLinks}>
+                        <View style={footerStyles.footerColumn}>
+                            <Text style={footerStyles.footerColumnTitle}>Empresa</Text>
+                            <Pressable onPress={() => console.log('Sobre Nosotros')} style={({ pressed }) => [footerStyles.footerLinkItem, pressed && footerStyles.footerLinkItemPressed]}><Text style={footerStyles.footerLinkText}>Sobre Nosotros</Text></Pressable>
+                            <Pressable onPress={() => console.log('Blog')} style={({ pressed }) => [footerStyles.footerLinkItem, pressed && footerStyles.footerLinkItemPressed]}><Text style={footerStyles.footerLinkText}>Blog</Text></Pressable>
+                            <Pressable onPress={() => console.log('Nuestra Historia')} style={({ pressed }) => [footerStyles.footerLinkItem, pressed && footerStyles.footerLinkItemPressed]}><Text style={footerStyles.footerLinkText}>Nuestra Historia</Text></Pressable>
+                            <Pressable onPress={() => console.log('Carreras')} style={({ pressed }) => [footerStyles.footerLinkItem, pressed && footerStyles.footerLinkItemPressed]}><Text style={footerStyles.footerLinkText}>Carreras</Text></Pressable>
+                        </View>
+
+                        <View style={footerStyles.footerColumn}>
+                            <Text style={footerStyles.footerColumnTitle}>Productos</Text>
+                            <Pressable onPress={() => console.log('Chocolates')} style={({ pressed }) => [footerStyles.footerLinkItem, pressed && footerStyles.footerLinkItemPressed]}><Text style={footerStyles.footerLinkText}>Chocolates</Text></Pressable>
+                            <Pressable onPress={() => console.log('Dulces')} style={({ pressed }) => [footerStyles.footerLinkItem, pressed && footerStyles.footerLinkItemPressed]}><Text style={footerStyles.footerLinkText}>Dulces</Text></Pressable>
+                            <Pressable onPress={() => console.log('Ediciones Especiales')} style={({ pressed }) => [footerStyles.footerLinkItem, pressed && footerStyles.footerLinkItemPressed]}><Text style={footerStyles.footerLinkText}>Ediciones Especiales</Text></Pressable>
+                            <Pressable onPress={() => console.log('Personalizados')} style={({ pressed }) => [footerStyles.footerLinkItem, pressed && footerStyles.footerLinkItemPressed]}><Text style={footerStyles.footerLinkText}>Personalizados</Text></Pressable>
+                            <Pressable onPress={() => console.log('Tiendas')} style={({ pressed }) => [footerStyles.footerLinkItem, pressed && footerStyles.footerLinkItemPressed]}><Text style={footerStyles.footerLinkText}>Tiendas</Text></Pressable>
+                        </View>
+
+                        <View style={footerStyles.footerColumn}>
+                            <Text style={footerStyles.footerColumnTitle}>Soporte</Text>
+                            <Pressable onPress={() => console.log('Preguntas Frecuentes')} style={({ pressed }) => [footerStyles.footerLinkItem, pressed && footerStyles.footerLinkItemPressed]}><Text style={footerStyles.footerLinkText}>Preguntas Frecuentes</Text></Pressable>
+                            <Pressable onPress={() => console.log('Contacto')} style={({ pressed }) => [footerStyles.footerLinkItem, pressed && footerStyles.footerLinkItemPressed]}><Text style={footerStyles.footerLinkText}>Contacto</Text></Pressable>
+                            <Pressable onPress={() => console.log('Envíos')} style={({ pressed }) => [footerStyles.footerLinkItem, pressed && footerStyles.footerLinkItemPressed]}><Text style={footerStyles.footerLinkText}>Envíos</Text></Pressable>
+                            <Pressable onPress={() => console.log('Devoluciones')} style={({ pressed }) => [footerStyles.footerLinkItem, pressed && footerStyles.footerLinkItemPressed]}><Text style={footerStyles.footerLinkText}>Devoluciones</Text></Pressable>
+                        </View>
+                    </View>
+
+                    <View style={footerStyles.footerCta}>
+                        <Pressable style={({ pressed }) => [footerStyles.ctaButton, pressed && footerStyles.ctaButtonPressed]} onPress={() => console.log('¡Compra Ahora!')}>
+                            <Text style={footerStyles.ctaButtonText}>¡Compra Ahora!</Text>
+                        </Pressable>
+                        <Text style={footerStyles.ctaSlogan}>Endulza tu día con ChocoLush.</Text>
+                    </View>
+                </View>
+
+                <View style={footerStyles.footerBottomSection}>
+                    <Text style={footerStyles.copyright}>© {currentYear} ChocoLush. Todos los derechos reservados.</Text>
+                    <View style={footerStyles.legalLinks}>
+                        <Pressable onPress={() => console.log('Términos y Condiciones')} style={({ pressed }) => [footerStyles.legalLinkItem, pressed && footerStyles.legalLinkItemPressed]}><Text style={footerStyles.legalLinkText}>Términos y Condiciones</Text></Pressable>
+                        <Pressable onPress={() => console.log('Política de Privacidad')} style={({ pressed }) => [footerStyles.legalLinkItem, pressed && footerStyles.legalLinkItemPressed]}><Text style={footerStyles.legalLinkText}>Política de Privacidad</Text></Pressable>
+                        <Pressable onPress={() => console.log('Política de Cookies')} style={({ pressed }) => [footerStyles.legalLinkItem, pressed && footerStyles.legalLinkItemPressed]}><Text style={footerStyles.legalLinkText}>Política de Cookies</Text></Pressable>
+                    </View>
+                </View>
+            </View>
         </View>
       </ScrollView>
     </>
@@ -448,8 +510,8 @@ const heroStyles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    width: '110%',
-    height: '200%',
+    width: '110%', // Increased width to ensure full cover
+    height: '200%', // Increased height for better background effect
     resizeMode: 'cover',
     zIndex: -1,
   },
@@ -481,23 +543,144 @@ const heroStyles = StyleSheet.create({
 // --- End Hero Component Styles ---
 
 
-// --- Footer Component Styles ---
+// --- NEW FOOTER Component Styles ---
 const footerStyles = StyleSheet.create({
-  footerContainer: {
-    backgroundColor: '#A63700', // Darker brown for footer
-    paddingVertical: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
+  mainFooter: {
+    backgroundColor: '#fffaf7', // A light, creamy color, similar to the image's background
+    paddingVertical: 48, // 3em converted to px (3 * 16)
+    paddingHorizontal: 32, // 2em converted to px (2 * 16)
+    color: '#5C4033', // Dark brown for text
+  },
+  footerContentWrapper: {
+    maxWidth: 1200,
+    alignSelf: 'center',
     width: '100%',
   },
-  footerText: {
-    color: '#FFF2E0',
-    fontSize: 14,
+  footerTopSection: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 32, // 2em converted
+    paddingBottom: 32, // 2em converted
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(92, 64, 51, 0.1)', // Subtle divider
+  },
+  footerBrand: {
+    flexShrink: 0,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    minWidth: 150,
+  },
+  footerLogo: {
+    height: 48, // 3em converted
+    width: 48 * (150 / 60), // Adjust based on aspect ratio
+    resizeMode: 'contain',
+    marginBottom: 16, // 1em converted
+  },
+  socialIcons: {
+    flexDirection: 'row',
+  },
+  socialIconLink: {
+    marginRight: 16, // 1em converted
+    padding: 5, // Add padding to make Pressable area larger
+  },
+  socialIconLinkPressed: {
+    opacity: 0.7, // Visual feedback on press
+  },
+  footerLinks: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 32, // 2em converted
+    flexGrow: 1,
+    justifyContent: 'space-around',
+  },
+  footerColumn: {
+    minWidth: 120,
+    marginBottom: 16, // Added for mobile stacking gap
+  },
+  footerColumnTitle: {
+    color: '#A60000', // Dark red for column titles
+    fontSize: 17.6, // 1.1em converted
+    marginBottom: 16, // 1em converted
+    fontWeight: 'bold', // React Native Text doesn't inherit font-weight, needs explicit
+  },
+  footerLinkItem: {
+    marginBottom: 12.8, // 0.8em converted
+    paddingVertical: 2, // Added to make Pressable area larger
+  },
+  footerLinkItemPressed: {
+    opacity: 0.7, // Visual feedback on press
+  },
+  footerLinkText: {
+    color: '#5C4033',
+    fontSize: 15.2, // 0.95em converted
+  },
+  footerCta: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    textAlign: 'center',
+    minWidth: 180,
+    marginLeft: 32, // 2em converted
+  },
+  ctaButton: {
+    backgroundColor: '#F47B20', // Bright orange for CTA
+    borderRadius: 5,
+    paddingVertical: 16, // 1em converted
+    paddingHorizontal: 32, // 2em converted
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5, // Android shadow
+  },
+  ctaButtonPressed: {
+    backgroundColor: '#E06A1C', // Darker on hover/press
+    transform: [{ translateY: -2 }],
+  },
+  ctaButtonText: {
+    color: 'white',
+    fontSize: 16, // 1em converted
+    fontWeight: 'bold',
+  },
+  ctaSlogan: {
+    marginTop: 12.8, // 0.8em converted
+    fontSize: 14.4, // 0.9em converted
+    color: '#7D5D4E', // Lighter brown for slogan
     textAlign: 'center',
   },
+  footerBottomSection: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 24, // 1.5em converted
+    fontSize: 13.6, // 0.85em converted
+  },
+  copyright: {
+    marginBottom: 8, // 0.5em converted, for mobile stacking
+    color: '#5C4033',
+  },
+  legalLinks: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center', // Center on small screens
+    marginTop: 16, // 1em converted, for mobile stacking
+  },
+  legalLinkItem: {
+    marginLeft: 24, // 1.5em converted
+    paddingVertical: 2, // Added to make Pressable area larger
+  },
+  legalLinkItemPressed: {
+    opacity: 0.7, // Visual feedback on press
+  },
+  legalLinkText: {
+    color: '#5C4033',
+    textDecorationLine: 'none', // Equivalent to text-decoration: none;
+    fontSize: 13.6, // 0.85em converted
+  },
 });
-// --- End Footer Component Styles ---
+// --- END NEW FOOTER Component Styles ---
 
 
 // Rest of IndexScreen.jsx styles remain the same
@@ -603,6 +786,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+
   },
   bannerContent: {
     position: 'absolute',
@@ -799,6 +983,67 @@ const responsiveStyles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     fontSize: 14,
+  },
+
+  // Responsive Footer Styles
+  footerTopSectionMobile: {
+    flexDirection: 'column', // Stack sections vertically
+    alignItems: 'center', // Center items when stacked
+    textAlign: 'center',
+  },
+  footerBrandMobile: {
+    alignItems: 'center', // Center logo and social icons
+    marginBottom: 32, // 2em converted
+  },
+  socialIconsMobile: {
+    marginTop: 16, // 1em converted
+  },
+  footerLinksMobile: {
+    flexDirection: 'column', // Stack link columns
+    alignItems: 'center', // Center link columns
+    marginBottom: 32, // 2em converted
+  },
+  footerColumnMobile: {
+    marginBottom: 24, // 1.5em converted
+    width: '100%', // Full width for columns
+    maxWidth: 250, // Constrain width of stacked columns
+  },
+  footerColumnTitleMobile: {
+    textAlign: 'center', // Center column titles
+  },
+  footerLinkItemMobile: {
+    alignItems: 'center', // Center list items in column
+  },
+  footerCtaMobile: {
+    marginLeft: 0, // Remove left margin
+    width: '100%',
+    marginBottom: 32, // 2em converted
+  },
+  footerBottomSectionMobile: {
+    flexDirection: 'column', // Stack copyright and legal links
+    textAlign: 'center',
+  },
+  legalLinksMobile: {
+    flexDirection: 'row', // Keep legal links in a row if possible
+    flexWrap: 'wrap', // Allow wrapping of legal links
+    justifyContent: 'center',
+    marginTop: 16, // 1em converted
+  },
+  legalLinkItemMobile: {
+    marginHorizontal: 12.8, // 0.8em converted
+    marginVertical: 8, // 0.5em converted
+  },
+  mainFooterSmall: {
+    paddingVertical: 32, // 2em converted
+    paddingHorizontal: 16, // 1em converted
+  },
+  socialIconLinkXSmall: {
+    marginHorizontal: 8, // 0.5em converted
+  },
+  ctaButtonSmall: {
+    paddingVertical: 12.8, // 0.8em converted
+    paddingHorizontal: 24, // 1.5em converted
+    fontSize: 14.4, // 0.9em converted
   },
 });
 
