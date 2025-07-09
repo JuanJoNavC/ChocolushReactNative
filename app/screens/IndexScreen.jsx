@@ -1,192 +1,468 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, Pressable, ScrollView, Dimensions } from 'react-native';
-// You'll need to replace these with your actual image paths
-// Make sure to put your images in the assets/images folder
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Image, Pressable, ScrollView, Dimensions, Animated, Easing } from 'react-native';
+import { useRouter } from 'expo-router';
+import { FontAwesome, Ionicons } from '@expo/vector-icons'; // For icons
+
+// Ensure these image paths are correct relative to IndexScreen.jsx
+import ChocoLushLogo from '../../assets/images/ChocoLushLogo.png'; // NEW: Add your logo
 import ProductosCard1 from '../../assets/images/ProductosCard1.png';
 import BrandsCard2 from '../../assets/images/BrandsCard2.png';
 import CalidadCard3 from '../../assets/images/CalidadCard3.png';
-import Bg2x from '../../assets/images/bg2x.png'; // Assuming bg2x.avif is converted to png
+import Bg2x from '../../assets/images/bg2x.png';
 import Smores2 from '../../assets/images/smores2.png';
-
-const { width } = Dimensions.get('window');
-
-const IndexScreen = () => {
-  // The heroSectionRef and onMounted from Vue are not directly transferable
-  // in the same way for basic React Native setup.
-  // We're focusing on replicating the UI and styling.
-
-  const handleDiscoverProducts = () => {
-    // Handle navigation or action for "Descubrir Productos"
-    console.log('Discover Products pressed');
-  };
-
-  const handleExploreBrands = () => {
-    // Handle navigation or action for "Explorar Marcas"
-    console.log('Explore Brands pressed');
-    // Example for navigation using expo-router (if you had a /brands route)
-    // useRouter().push('/brands');
-  };
-
-  const handleSeeNewArrivals = () => {
-    // Handle navigation or action for "Ver Novedades"
-    console.log('See New Arrivals pressed');
-  };
-
-  const handleExploreCollection = () => {
-    console.log('Explore Our Collection pressed');
-  };
-
-  const handleExploreSmores = () => {
-    console.log('Explore Smores pressed');
-  };
-
-  // Simple Navbar Component (adapted from Vue's NavBarComponent)
-  const NavBarComponent = () => (
-    <View style={navStyles.navBar}>
-      <Text style={navStyles.navText}>Chocolush</Text>
-      {/* You can add navigation links here */}
-    </View>
-  );
-
-  // Simple Hero Component (adapted from Vue's HeroComponent)
-  const HeroComponent = () => (
-    <View style={heroStyles.heroContainer}>
-      <Text style={heroStyles.heroTitle}>Deléitate con la Dulzura</Text>
-      <Text style={heroStyles.heroSubtitle}>Explora nuestros sabores únicos</Text>
-      <Pressable style={heroStyles.heroButton} onPress={() => console.log('Shop Now')}>
-        <Text style={heroStyles.heroButtonText}>Comprar Ahora</Text>
-      </Pressable>
-    </View>
-  );
-
-  // Simple Footer Component (adapted from Vue's FooterComponent)
-  const FooterComponent = () => (
-    <View style={footerStyles.footerContainer}>
-      <Text style={footerStyles.footerText}>© 2025 Chocolush. Todos los derechos reservados.</Text>
-      {/* Add more footer content if needed */}
-    </View>
-  );
+import BannerImg2 from '../../assets/images/bannerimg2.png';
 
 
-  return (
-    <ScrollView style={styles.outerContainer}>
-      <NavBarComponent />
-      <HeroComponent />
+const { width, height } = Dimensions.get('window'); // Get full screen dimensions
 
-      <View style={styles.paddingTop}>
-        <View style={styles.container}>
-          <Text style={styles.mainHeading}>Bienvenido a Chocolush</Text>
-          <Text style={styles.subText}>Estas a un paso de probar los mejores dulces</Text>
+// --- DefaultButtonComponent (inlined for this example as per request) ---
+const DefaultButton = ({ text, onPress, style, textStyle }) => (
+  <Pressable style={[defaultButtonStyles.button, style]} onPress={onPress}>
+    <Text style={[defaultButtonStyles.text, textStyle]}>{text}</Text>
+  </Pressable>
+);
 
-          <View style={styles.cardsGridContainer}>
-            <View style={styles.productCard}>
-              <Image source={ProductosCard1} style={styles.cardImgTop} />
-              <View style={styles.cardBody}>
-                <Text style={styles.cardTitle}>Nuestra Exquisita Selección</Text>
-                <Text style={styles.cardText}>Explore una curada colección de los más finos dulces y chocolates, diseñados para deleitar todos los paladares.</Text>
-                <View style={styles.cardButtonWrapper}>
-                  <Pressable style={styles.btnPrimary} onPress={handleDiscoverProducts}>
-                    <Text style={styles.btnPrimaryText}>Descubrir Productos</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.productCard}>
-              <Image source={BrandsCard2} style={styles.cardImgTop} />
-              <View style={styles.cardBody}>
-                <Text style={styles.cardTitle}>Marcas de Prestigio</Text>
-                <Text style={styles.cardText}>Conozca las renombradas marcas que conforman nuestra oferta, garantizando calidad y sabor inigualables.</Text>
-                <View style={styles.cardButtonWrapper}>
-                  <Pressable style={styles.btnPrimary} onPress={handleExploreBrands}>
-                    <Text style={styles.btnPrimaryText}>Explorar Marcas</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.productCard}>
-              <Image source={CalidadCard3} style={styles.cardImgTop} />
-              <View style={styles.cardBody}>
-                <Text style={styles.cardTitle}>Calidad Garantizada</Text>
-                <Text style={styles.cardText}>Nuestra promesa: solo los productos de la más alta calidad, seleccionados de las mejores fuentes a nivel global.</Text>
-                <View style={styles.cardButtonWrapper}>
-                  <Pressable style={styles.btnPrimary} onPress={handleSeeNewArrivals}>
-                    <Text style={styles.btnPrimaryText}>Ver Novedades</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.candyBanner}>
-        <Image source={Bg2x} style={styles.bannerImage} />
-        <View style={styles.bannerContent}>
-          <Text style={styles.bannerTitle}>Deléitese con la Exquisita Dulzura</Text>
-          <Text style={styles.bannerText}>Descubra nuestra selección curada de chocolates gourmet y dulces artesanales, elaborados para deleitar cada paladar.</Text>
-          <Pressable style={styles.shopNowBtn} onPress={handleExploreCollection}>
-            <Text style={styles.shopNowBtnText}>Explora Nuestra Colección</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <View style={styles.featureBoxWrapper}>
-        <View style={styles.featureBox}>
-          <View style={styles.textContent}>
-            <Text style={styles.featureTitle}>Verano de S'mores</Text>
-            <Text style={styles.featureDescription}>
-              Aplasta tus S'mores y crea recuerdos inolvidables, porque ha llegado el momento de reunirse alrededor de la fogata para disfrutar del dulce favorito de todos.
-            </Text>
-            <Pressable style={styles.exploreButton} onPress={handleExploreSmores}>
-              <Text style={styles.exploreButtonText}>Explore S'mores</Text>
-            </Pressable>
-          </View>
-          <View style={styles.imageContent}>
-            <View style={styles.circularImageContainer}>
-              <Image source={Smores2} style={styles.featureImage} />
-            </View>
-          </View>
-        </View>
-      </View>
-      <FooterComponent />
-    </ScrollView>
-  );
-};
-
-const navStyles = StyleSheet.create({
-  navBar: {
-    backgroundColor: '#A65300', // Example color
-    padding: 15,
+const defaultButtonStyles = StyleSheet.create({
+  button: {
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 5,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  navText: {
-    color: '#FFF',
-    fontSize: 20,
+  text: {
+    color: '#4a2c2a',
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });
+// --- End DefaultButtonComponent ---
+
+
+// --- NavBarComponent ---
+const NavBarComponent = ({ isScrolled }) => { // Receive isScrolled as prop
+  const router = useRouter();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const slideAnim = useRef(new Animated.Value(-width * 0.7)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Animation for offcanvas menu
+  useEffect(() => {
+    if (isMenuOpen) {
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        easing: Easing.ease,
+        useNativeDriver: true,
+      }).start();
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        easing: Easing.ease,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: -width * 0.7,
+        duration: 300,
+        easing: Easing.ease,
+        useNativeDriver: true,
+      }).start();
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        easing: Easing.ease,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isMenuOpen, slideAnim, fadeAnim, width]);
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const navigateAndCloseMenu = (path) => {
+    router.push(path);
+    setIsMenuOpen(false);
+  };
+
+  return (
+    <>
+      {/* Fixed Navbar */}
+      <View style={[navStyles.navbar, isScrolled && navStyles.navbarScrolled]}>
+        <View style={navStyles.navbarLogo}>
+          <Image source={ChocoLushLogo} style={navStyles.navbarLogoImg} />
+        </View>
+
+        {/* Desktop Nav Items */}
+        {width > 768 && (
+          <View style={navStyles.desktopNavItems}>
+            <View style={navStyles.navItem}>
+              <DefaultButton text="Home" onPress={() => router.push('/')} />
+            </View>
+            <View style={navStyles.navItem}>
+              <DefaultButton text="Brands" onPress={() => router.push('/screens/BrandsScreen')} />
+            </View>
+            <View style={navStyles.navItem}>
+              <DefaultButton text="Productos" onPress={() => router.push('/screens/ProductsScreen')} />
+            </View>
+          </View>
+        )}
+
+        {/* User Section (Desktop) */}
+        {width > 768 && (
+          <View style={navStyles.navbarUserSection}>
+            <Pressable style={navStyles.circleNav} onPress={() => router.push('/screens/LogInScreen')}>
+                <FontAwesome name="user" size={24} color="#3c0d0d" />
+            </Pressable>
+          </View>
+        )}
+
+        {/* Hamburger Button (Mobile) */}
+        {width <= 768 && (
+          <Pressable onPress={toggleMenu} style={navStyles.navbarHamburger}>
+            <FontAwesome name={isMenuOpen ? 'times' : 'bars'} size={30} color="#4a2c2a" />
+          </Pressable>
+        )}
+      </View>
+
+      {/* Offcanvas Backdrop (Mobile) */}
+      {width <= 768 && (
+        <Animated.View style={[navStyles.offcanvasBackdrop, { opacity: fadeAnim, display: isMenuOpen ? 'flex' : 'none' }]}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={toggleMenu} />
+        </Animated.View>
+      )}
+
+      {/* Offcanvas Menu (Mobile) */}
+      {width <= 768 && (
+        <Animated.View style={[navStyles.offcanvasMenu, { transform: [{ translateX: slideAnim }] }]}>
+          <View style={navStyles.offcanvasCloseButton}>
+            <Pressable onPress={toggleMenu}>
+              <FontAwesome name="times" size={30} color="#4a2c2a" />
+            </Pressable>
+          </View>
+          <View style={navStyles.offcanvasNavList}>
+            <View style={navStyles.navItemOffcanvas}>
+              <DefaultButton text="Home" onPress={() => navigateAndCloseMenu('/')} style={navStyles.offcanvasButton} textStyle={navStyles.offcanvasButtonText}/>
+            </View>
+            <View style={navStyles.navItemOffcanvas}>
+              <DefaultButton text="Brands" onPress={() => navigateAndCloseMenu('/screens/BrandsScreen')} style={navStyles.offcanvasButton} textStyle={navStyles.offcanvasButtonText}/>
+            </View>
+            <View style={navStyles.navItemOffcanvas}>
+              <DefaultButton text="Productos" onPress={() => navigateAndCloseMenu('/screens/ProductsScreen')} style={navStyles.offcanvasButton} textStyle={navStyles.offcanvasButtonText}/>
+            </View>
+            <View style={navStyles.navItemOffcanvas}>
+              <DefaultButton text="Iniciar Sesion" onPress={() => navigateAndCloseMenu('/screens/LogInScreen')} style={navStyles.offcanvasButton} textStyle={navStyles.offcanvasButtonText}/>
+            </View>
+          </View>
+        </Animated.View>
+      )}
+    </>
+  );
+};
+// --- End NavBarComponent ---
+
+
+const IndexScreen = () => {
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  const handleScroll = (event) => {
+    const scrollY = event.nativeEvent.contentOffset.y;
+    setIsScrolled(scrollY > 100); // Adjust this threshold as needed
+  };
+
+  return (
+    <>
+      <NavBarComponent isScrolled={isScrolled} />
+      <ScrollView
+        style={styles.outerContainer}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
+        {/* Hero Component Content */}
+        <View style={heroStyles.heroContainer}>
+            <Image
+                source={BannerImg2} // Use the imported image
+                style={heroStyles.heroBackgroundImage}
+                resizeMode="cover"
+            />
+            <Text style={heroStyles.heroTitle}>Deléitate con la Dulzura</Text>
+            <Text style={heroStyles.heroSubtitle}>Explora nuestros sabores únicos</Text>
+            <Pressable style={heroStyles.heroButton} onPress={() => console.log('Shop Now')}>
+                <Text style={heroStyles.heroButtonText}>Comprar Ahora</Text>
+            </Pressable>
+        </View>
+
+        <View style={styles.paddingTop}>
+          <View style={styles.container}>
+            <Text style={styles.mainHeading}>Bienvenido a Chocolush</Text>
+            <Text style={styles.subText}>Estas a un paso de probar los mejores dulces</Text>
+
+            <View style={[
+              styles.cardsGridContainer,
+              width >= 768 && responsiveStyles.cardsGridContainerLarge
+            ]}>
+              <View style={styles.productCard}>
+                <Image source={ProductosCard1} style={styles.cardImgTop} />
+                <View style={styles.cardBody}>
+                  <Text style={styles.cardTitle}>Nuestra Exquisita Selección</Text>
+                  <Text style={styles.cardText}>Explore una curada colección de los más finos dulces y chocolates, diseñados para deleitar todos los paladares.</Text>
+                  <View style={styles.cardButtonWrapper}>
+                    <Pressable style={styles.btnPrimary} onPress={() => console.log('Discover Products pressed')}>
+                      <Text style={styles.btnPrimaryText}>Descubrir Productos</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.productCard}>
+                <Image source={BrandsCard2} style={styles.cardImgTop} />
+                <View style={styles.cardBody}>
+                  <Text style={styles.cardTitle}>Marcas de Prestigio</Text>
+                  <Text style={styles.cardText}>Conozca las renombradas marcas que conforman nuestra oferta, garantizando calidad y sabor inigualables.</Text>
+                  <View style={styles.cardButtonWrapper}>
+                    <Pressable style={styles.btnPrimary} onPress={() => console.log('Explore Brands pressed')}>
+                      <Text style={styles.btnPrimaryText}>Explorar Marcas</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.productCard}>
+                <Image source={CalidadCard3} style={styles.cardImgTop} />
+                <View style={styles.cardBody}>
+                  <Text style={styles.cardTitle}>Calidad Garantizada</Text>
+                  <Text style={styles.cardText}>Nuestra promesa: solo los productos de la más alta calidad, seleccionados de las mejores fuentes a nivel global.</Text>
+                  <View style={styles.cardButtonWrapper}>
+                    <Pressable style={styles.btnPrimary} onPress={() => console.log('See New Arrivals pressed')}>
+                      <Text style={styles.btnPrimaryText}>Ver Novedades</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        <View style={[
+          styles.candyBanner,
+          width <= 768 && responsiveStyles.candyBannerSmall,
+          width <= 480 && responsiveStyles.candyBannerXSmall
+        ]}>
+          <Image source={Bg2x} style={styles.bannerImage} />
+          <View style={styles.bannerContent}>
+            <Text style={[
+              styles.bannerTitle,
+              width <= 768 && responsiveStyles.bannerTitleSmall,
+              width <= 480 && responsiveStyles.bannerTitleXSmall
+            ]}>Deléitese con la Exquisita Dulzura</Text>
+            <Text style={[
+              styles.bannerText,
+              width <= 768 && responsiveStyles.bannerTextSmall,
+              width <= 480 && responsiveStyles.bannerTextXSmall
+            ]}>Descubra nuestra selección curada de chocolates gourmet y dulces artesanales, elaborados para deleitar cada paladar.</Text>
+            <Pressable style={[
+              styles.shopNowBtn,
+              width <= 768 && responsiveStyles.shopNowBtnSmall,
+              width <= 480 && responsiveStyles.shopNowBtnXSmall
+            ]} onPress={() => console.log('Explore Our Collection pressed')}>
+              <Text style={styles.shopNowBtnText}>Explora Nuestra Colección</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.featureBoxWrapper}>
+          <View style={[
+            styles.featureBox,
+            width <= 992 && responsiveStyles.featureBoxSmall,
+            width <= 576 && responsiveStyles.featureBoxXSmall
+          ]}>
+            <View style={[
+              styles.textContent,
+              width <= 992 && responsiveStyles.textContentSmall
+            ]}>
+              <Text style={[
+                styles.featureTitle,
+                width <= 992 && responsiveStyles.featureTitleSmall,
+                width <= 576 && responsiveStyles.featureTitleXSmall
+              ]}>Verano de S'mores</Text>
+              <Text style={[
+                styles.featureDescription,
+                width <= 992 && responsiveStyles.featureDescriptionSmall
+              ]}>
+                Aplasta tus S'mores y crea recuerdos inolvidables, porque ha llegado el momento de reunirse alrededor de la fogata para disfrutar del dulce favorito de todos.
+              </Text>
+              <Pressable style={styles.exploreButton} onPress={() => console.log('Explore Smores pressed')}>
+                <Text style={styles.exploreButtonText}>Explore S'mores</Text>
+              </Pressable>
+            </View>
+            <View style={styles.imageContent}>
+              <View style={[
+                styles.circularImageContainer,
+                width <= 576 && responsiveStyles.circularImageContainerXSmall
+              ]}>
+                <Image source={Smores2} style={[
+                  styles.featureImage,
+                  width <= 576 && responsiveStyles.featureImageXSmall
+                ]} />
+              </View>
+            </View>
+          </View>
+        </View>
+        {/* Footer Component Content */}
+        <View style={footerStyles.footerContainer}>
+            <Text style={footerStyles.footerText}>© 2025 Chocolush. Todos los derechos reservados.</Text>
+        </View>
+      </ScrollView>
+    </>
+  );
+};
+
+
+// --- Navbar Styles (ONLY these are for the NavBarComponent) ---
+const navStyles = StyleSheet.create({
+  navbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 80, // 6em approx
+    paddingHorizontal: 20, // 1.5em approx
+    position: 'absolute', // Fixed positioning
+    top: 0,
+    left: 0,
+    right: 0,
+    justifyContent: 'space-between',
+    backgroundColor: 'transparent',
+    zIndex: 1000,
+  },
+  navbarScrolled: {
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 5, // Android shadow
+  },
+  navbarLogo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 20,
+  },
+  navbarLogoImg: {
+    height: 30, // 2em approx
+    width: 30 * (150 / 60), // Adjust width based on aspect ratio of your logo if known
+    resizeMode: 'contain',
+    marginRight: 8, // 0.5em approx
+  },
+  navbarHamburger: {
+    display: 'flex', // Show on mobile
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    zIndex: 1002,
+  },
+  desktopNavItems: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  navbarUserSection: {
+    marginLeft: 'auto', // Push to right
+  },
+  navItem: {
+    marginLeft: 40, // 3em approx
+  },
+  navItemOffcanvas: {
+    paddingVertical: 10, // 0.8em approx
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  offcanvasButton: {
+    width: '100%',
+    alignItems: 'flex-start',
+    backgroundColor: 'transparent',
+    paddingHorizontal: 15, // 0.5em + 1em approx
+    paddingVertical: 8,
+  },
+  offcanvasButtonText: {
+    color: '#4a2c2a',
+    fontSize: 16, // 1.1em approx
+    fontWeight: 'normal',
+  },
+  offcanvasBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 1000,
+  },
+  offcanvasMenu: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '70%', // Adjust width as needed
+    maxWidth: 300,
+    height: '100%',
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 10,
+    zIndex: 1001,
+    padding: 15, // 1em approx
+    flexDirection: 'column',
+    overflow: 'hidden',
+  },
+  offcanvasNavList: {
+    width: '100%',
+  },
+  offcanvasCloseButton: {
+    alignSelf: 'flex-end',
+    paddingBottom: 15, // 1em approx
+  },
+  circleNav: {
+    width: 50,
+    height: 50,
+    borderRadius: 25, // 50%
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
+// --- End Navbar Styles ---
+
 
 const heroStyles = StyleSheet.create({
   heroContainer: {
-    backgroundColor: '#FFECB3', // A light, warm color
-    paddingVertical: 50,
+    paddingVertical: 80,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
+    width: '100%',
+    position: 'relative', // IMPORTANT: for absolute positioning of the image
+    overflow: 'hidden', // Ensures image doesn't overflow rounded corners if added
+  },
+  heroBackgroundImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '110%',
+    height: '200%',
+    resizeMode: 'cover',
+    zIndex: -1,
   },
   heroTitle: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#A63700',
+    color: '#FFF', // Changed to white for better contrast on dark image
     textAlign: 'center',
     marginBottom: 10,
   },
   heroSubtitle: {
     fontSize: 18,
-    color: '#664400',
+    color: '#FFF', // Changed to white for better contrast on dark image
     textAlign: 'center',
     marginBottom: 30,
   },
@@ -202,7 +478,10 @@ const heroStyles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+// --- End Hero Component Styles ---
 
+
+// --- Footer Component Styles ---
 const footerStyles = StyleSheet.create({
   footerContainer: {
     backgroundColor: '#A63700', // Darker brown for footer
@@ -210,6 +489,7 @@ const footerStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 20,
+    width: '100%',
   },
   footerText: {
     color: '#FFF2E0',
@@ -217,51 +497,55 @@ const footerStyles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+// --- End Footer Component Styles ---
 
+
+// Rest of IndexScreen.jsx styles remain the same
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
     backgroundColor: '#FFF2E0',
+    paddingTop: 80, // Make space for fixed navbar
   },
   paddingTop: {
-    paddingTop: 16, // 1em approx
+    paddingTop: 16,
   },
   container: {
-    maxWidth: 1200, // This will be simulated by horizontal padding and `alignSelf: 'center'`
-    alignSelf: 'center', // Center the container
+    maxWidth: 1200,
+    alignSelf: 'center',
     width: '100%',
-    paddingHorizontal: 20, // 2em approx, using pixels for RN
+    paddingHorizontal: 20,
   },
   mainHeading: {
     color: '#A63700',
     textAlign: 'center',
-    fontSize: 28, // Adjusted for mobile
+    fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 20, // 1em approx
+    marginBottom: 20,
   },
   subText: {
     color: '#664400',
     textAlign: 'center',
-    fontSize: 16, // 1.2em approx
-    marginBottom: 30, // 2em approx
+    fontSize: 16,
+    marginBottom: 30,
   },
   cardsGridContainer: {
-    flexDirection: 'column', // Default to column for mobile
-    gap: 30, // 2em approx
-    padding: 15, // 1em approx
+    flexDirection: 'column',
+    gap: 30,
+    padding: 15,
     alignSelf: 'center',
     width: '100%',
   },
   productCard: {
-    borderWidth: 0, // No border, border: none
+    borderWidth: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 5, // For Android shadow
+    elevation: 5,
     display: 'flex',
     flexDirection: 'column',
-    height: 'auto', // Will adjust based on content
+    height: 'auto',
   },
   cardImgTop: {
     width: '100%',
@@ -270,7 +554,7 @@ const styles = StyleSheet.create({
   },
   cardBody: {
     backgroundColor: '#FAD0C4',
-    padding: 15, // 1.5em approx
+    padding: 15,
     flexGrow: 1,
     justifyContent: 'space-between',
   },
@@ -279,29 +563,30 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: 'bold',
     fontSize: 18,
-    marginBottom: 10, // 0.5em approx
+    marginBottom: 10,
   },
   cardText: {
     color: '#5C4033',
     textAlign: 'center',
-    fontSize: 15, // 0.95em approx
-    marginBottom: 15, // 1em approx
+    fontSize: 15,
+    marginBottom: 15,
     flexGrow: 1,
   },
   cardButtonWrapper: {
     alignItems: 'center',
-    marginTop: 'auto', // Push to bottom
+    marginTop: 'auto',
   },
   btnPrimary: {
     backgroundColor: '#A65300',
-    paddingVertical: 12, // 0.75em approx
-    paddingHorizontal: 25, // 1.5em approx
+    paddingVertical: 12,
+    paddingHorizontal: 25,
     fontWeight: 'bold',
-    borderRadius: 5, // A slight round
+    borderRadius: 5,
   },
   btnPrimaryText: {
     color: 'white',
     fontWeight: 'bold',
+    fontSize: 16,
   },
 
   // Candy Banner Styles
@@ -318,36 +603,34 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
-    tintColor: 'rgba(0,0,0,0.2)', // Simulates brightness(0.8) by overlaying a semi-transparent black
-    tintColorBlendMode: 'multiply',
   },
   bannerContent: {
     position: 'absolute',
     textAlign: 'center',
     color: '#FFF',
-    paddingHorizontal: 10, // 1em approx
+    paddingHorizontal: 10,
     maxWidth: '80%',
   },
   bannerTitle: {
-    fontSize: 30, // 3em approx
-    marginBottom: 10, // 0.5em approx
+    fontSize: 30,
+    marginBottom: 10,
     color: '#FFF8DC',
     fontWeight: 'bold',
     textAlign: 'center',
   },
   bannerText: {
-    fontSize: 18, // 1.5em approx
-    marginBottom: 20, // 1.5em approx
-    lineHeight: 22, // 1.4 line-height
+    fontSize: 18,
+    marginBottom: 20,
+    lineHeight: 22,
     color: '#FFF8DC',
     textAlign: 'center',
   },
   shopNowBtn: {
-    backgroundColor: '#FF69B4', // Hot pink for var(--main-color)
+    backgroundColor: '#FF69B4',
     color: 'white',
-    paddingVertical: 15, // 1em approx
-    paddingHorizontal: 30, // 2em approx
-    fontSize: 18, // 1.2em approx
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    fontSize: 18,
     fontWeight: 'bold',
     borderRadius: 30,
     shadowColor: '#000',
@@ -364,8 +647,8 @@ const styles = StyleSheet.create({
 
   // Feature Box Styles
   featureBoxWrapper: {
-    padding: 10, // 1em approx
-    marginVertical: 30, // 3em approx
+    padding: 10,
+    marginVertical: 30,
     alignItems: 'center',
     width: '100%',
   },
@@ -374,10 +657,10 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     maxWidth: 1000,
     width: '90%',
-    padding: 30, // 3em approx
-    flexDirection: 'row', // Default to row for wider screens
+    padding: 30,
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 30, // 3em approx
+    gap: 30,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
@@ -388,28 +671,28 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'column',
     justifyContent: 'center',
-    alignItems: 'flex-start', // Aligns text to the left
-    paddingRight: 20, // 2em approx
+    alignItems: 'flex-start',
+    paddingRight: 20,
   },
   featureTitle: {
-    fontSize: 28, // 2.8em approx
+    fontSize: 28,
     color: '#8B4513',
-    marginBottom: 5, // 0.5em approx
-    lineHeight: 32, // 1.2 line-height
+    marginBottom: 5,
+    lineHeight: 32,
     fontWeight: 'bold',
   },
   featureDescription: {
-    fontSize: 16, // 1.1em approx
+    fontSize: 16,
     color: '#5C4033',
-    lineHeight: 24, // 1.6 line-height
-    marginBottom: 20, // 2em approx
+    lineHeight: 24,
+    marginBottom: 20,
   },
   exploreButton: {
     backgroundColor: '#3498db',
     color: 'white',
-    paddingVertical: 10, // 0.8em approx
-    paddingHorizontal: 25, // 1.8em approx
-    fontSize: 16, // 1.05em approx
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+    fontSize: 16,
     fontWeight: 'bold',
     borderRadius: 25,
     shadowColor: '#000',
@@ -432,7 +715,7 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     backgroundColor: '#FFA000',
-    borderRadius: 150, // 50% for perfect circle
+    borderRadius: 150,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -440,54 +723,46 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 20,
-    elevation: 10, // For Android glow
+    elevation: 10,
   },
   featureImage: {
     width: '90%',
     height: '90%',
     resizeMode: 'cover',
-    borderRadius: (300 * 0.9) / 2, // Make image circular
+    borderRadius: (300 * 0.9) / 2,
   },
 });
 
 // Responsive styles using Dimensions API
-// Note: StyleSheet.create doesn't support media queries directly.
-// We apply conditional styles based on screen width.
-// This is a simplified approach. For more complex responsiveness,
-// you might use `react-native-responsive-fontsize` or `Dimensions` more extensively.
-
 const responsiveStyles = StyleSheet.create({
-  // Cards Grid Container for larger screens (min-width: 768px)
   cardsGridContainerLarge: {
     flexDirection: 'row',
-    flexWrap: 'wrap', // Allows items to wrap
-    justifyContent: 'space-around', // Distribute items evenly
-    gap: 30, // 2em approx
-    padding: 20, // 2em approx
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+    gap: 30,
+    padding: 20,
   },
-  // Feature Box for smaller screens (max-width: 992px)
   featureBoxSmall: {
     flexDirection: 'column',
     textAlign: 'center',
-    padding: 20, // 2em approx
-    gap: 20, // 2em approx
+    padding: 20,
+    gap: 20,
   },
   textContentSmall: {
     paddingRight: 0,
-    alignItems: 'center', // Center text
+    alignItems: 'center',
   },
   featureTitleSmall: {
-    fontSize: 22, // 2.2em approx
+    fontSize: 22,
   },
   featureDescriptionSmall: {
-    fontSize: 16, // 1em approx
+    fontSize: 16,
   },
-  // Feature Box for very small screens (max-width: 576px)
   featureBoxXSmall: {
-    padding: 15, // 1.5em approx
+    padding: 15,
   },
   featureTitleXSmall: {
-    fontSize: 18, // 1.8em approx
+    fontSize: 18,
   },
   circularImageContainerXSmall: {
     width: 200,
@@ -497,35 +772,33 @@ const responsiveStyles = StyleSheet.create({
   featureImageXSmall: {
     borderRadius: (200 * 0.9) / 2,
   },
-  // Candy Banner for smaller screens (max-width: 768px)
   candyBannerSmall: {
     height: 300,
   },
   bannerTitleSmall: {
-    fontSize: 20, // 2em approx
+    fontSize: 20,
   },
   bannerTextSmall: {
-    fontSize: 16, // 1em approx
+    fontSize: 16,
   },
   shopNowBtnSmall: {
-    paddingVertical: 12, // 0.8em approx
-    paddingHorizontal: 25, // 1.5em approx
-    fontSize: 16, // 1em approx
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    fontSize: 16,
   },
-  // Candy Banner for very small screens (max-width: 480px)
   candyBannerXSmall: {
     height: 250,
   },
   bannerTitleXSmall: {
-    fontSize: 15, // 1.5em approx
+    fontSize: 15,
   },
   bannerTextXSmall: {
-    fontSize: 14, // 0.9em approx
+    fontSize: 14,
   },
   shopNowBtnXSmall: {
-    paddingVertical: 10, // 0.7em approx
-    paddingHorizontal: 20, // 1.2em approx
-    fontSize: 14, // 0.9em approx
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    fontSize: 14,
   },
 });
 
