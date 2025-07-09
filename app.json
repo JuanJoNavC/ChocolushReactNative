@@ -1,5 +1,7 @@
 {
   "expo": {
+    "entryPoint": "./app/index.js",
+    "scheme": "ChocolushReactNative",
     "name": "ChocolushReactNative",
     "slug": "ChocolushReactNative",
     "version": "1.0.0",
@@ -24,6 +26,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-router"
+    ]
   }
 }
