@@ -32,12 +32,19 @@ const PaymentsScreen = () => {
   const router = useRouter();
   const [carrito, setCarrito] = useState([]);
   const [numeroCuenta, setNumeroCuenta] = useState("");
-  const [usarDireccionRegistrada, setUsarDireccionRegistrada] = useState(false);
+  const [usarDireccionRegistrada, setUsarDireccionRegistrada] = useState(true);
   const [direccionEspecifica, setDireccionEspecifica] = useState("");
   const [clienteInfo, setClienteInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  // Estados para el formulario, pre-llenados desde el clienteInfo
+  const [cedula, setCedula] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [apellido, setApellido] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [direccionRegistrada, setDireccionRegistrada] = useState("");
 
   // Responsive design check
   useEffect(() => {
@@ -74,16 +81,34 @@ const PaymentsScreen = () => {
     const loadData = async () => {
       try {
         const storedCarrito = await AsyncStorage.getItem("carrito");
+
+        // LÍNEAS DE DEPURACIÓN (AHORA SABEMOS QUÉ MIRAR)
+        console.log(
+          "Valor leído de AsyncStorage para 'carrito':",
+          storedCarrito
+        );
+
         if (storedCarrito) {
           const parsedCarrito = JSON.parse(storedCarrito);
-          // FIXED: Map over the array and explicitly convert price and quantity to numbers
+
+          console.log("Carrito parseado:", parsedCarrito);
+
+          // --- AQUÍ ESTÁ LA CORRECCIÓN ---
+          // Usar las propiedades "price" y "quantity" del objeto original
           const sanitizedCarrito = parsedCarrito.map((item) => ({
             ...item,
-            precio: Number(item.precio),
-            cantidad: Number(item.cantidad),
+            precio: Number(item.price),
+            cantidad: Number(item.quantity),
           }));
+
           setCarrito(sanitizedCarrito);
+
+          console.log(
+            "Carrito establecido en el estado (CORREGIDO):",
+            sanitizedCarrito
+          );
         } else {
+          console.warn("No se encontró un carrito en AsyncStorage.");
           Alert.alert(
             "Carrito Vacío",
             "Tu carrito está vacío. Redirigiendo a la página de productos."
@@ -94,6 +119,8 @@ const PaymentsScreen = () => {
 
         let userEmailForAPI = null;
         const storedUserEmail = await AsyncStorage.getItem("userEmail");
+        const storedDireccion = await AsyncStorage.getItem("userAddress");
+
         if (storedUserEmail) {
           userEmailForAPI = storedUserEmail;
         } else {
@@ -113,12 +140,20 @@ const PaymentsScreen = () => {
           }
         }
 
+        if (storedDireccion) {
+          setDireccionRegistrada(storedDireccion);
+          setUsarDireccionRegistrada(true);
+        } else {
+          setUsarDireccionRegistrada(false);
+        }
+
         if (userEmailForAPI) {
           try {
             const response = await axios.get(
               `${APIClienteDTO}?correo=${userEmailForAPI}`
             );
             setClienteInfo(response.data);
+
             if (!response.data || !response.data.cliCedula) {
               Alert.alert(
                 "Error",
@@ -158,6 +193,17 @@ const PaymentsScreen = () => {
     loadData();
   }, []);
 
+  // Use another useEffect to populate form fields once clienteInfo is available
+  useEffect(() => {
+    if (clienteInfo) {
+      setCedula(clienteInfo.cliCedula || "");
+      setNombre(clienteInfo.cliNombre || "");
+      setApellido(clienteInfo.cliApellido || "");
+      setTelefono(clienteInfo.cliTelefono || "");
+      setDireccionRegistrada(clienteInfo.cliDireccion || "");
+    }
+  }, [clienteInfo]);
+
   const procesarPago = async () => {
     if (carrito.length === 0) {
       Alert.alert(
@@ -186,7 +232,7 @@ const PaymentsScreen = () => {
     try {
       setLoading(true);
       const direccionFinal = usarDireccionRegistrada
-        ? "Entrega en dirección registrada"
+        ? direccionRegistrada
         : direccionEspecifica.trim();
 
       const compraPayload = {
@@ -199,10 +245,11 @@ const PaymentsScreen = () => {
         direccion: direccionFinal,
         metodoPago: "Transferencia Bancaria",
         cliente: {
-          cliCedula: clienteInfo.cliCedula,
-          cliNombre: clienteInfo.cliNombre,
-          cliApellido: clienteInfo.cliApellido,
-          cliTelefono: clienteInfo.cliTelefono,
+          cliCedula: cedula,
+          cliNombre: nombre,
+          cliApellido: apellido,
+          cliTelefono: telefono,
+          cliDireccion: direccionFinal,
         },
       };
 
@@ -285,7 +332,6 @@ const PaymentsScreen = () => {
                   carrito.map((item) => (
                     <View key={item.id} style={styles.productoItem}>
                       <Image
-                        // FIXED: Added a robust check for the image source
                         source={
                           item.imagen ? { uri: item.imagen } : PlaceholderImage
                         }
@@ -336,6 +382,45 @@ const PaymentsScreen = () => {
               <Text style={styles.sectionTitle}>Datos de Pago</Text>
               <View style={styles.form}>
                 <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Cédula</Text>
+                  <TextInput
+                    style={styles.campoTextoPago}
+                    onChangeText={setCedula}
+                    value={cedula}
+                    placeholder="Número de cédula"
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Nombres</Text>
+                  <TextInput
+                    style={styles.campoTextoPago}
+                    onChangeText={setNombre}
+                    value={nombre}
+                    placeholder="Nombres del cliente"
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Apellidos</Text>
+                  <TextInput
+                    style={styles.campoTextoPago}
+                    onChangeText={setApellido}
+                    value={apellido}
+                    placeholder="Apellidos del cliente"
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Teléfono</Text>
+                  <TextInput
+                    style={styles.campoTextoPago}
+                    onChangeText={setTelefono}
+                    value={telefono}
+                    placeholder="Teléfono de contacto"
+                    keyboardType="phone-pad"
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
                   <Text style={styles.label}>Número de Cuenta</Text>
                   <TextInput
                     style={styles.campoTextoPago}
@@ -347,34 +432,39 @@ const PaymentsScreen = () => {
                 </View>
 
                 {/* Checkbox for registered address */}
-                <Pressable
-                  style={styles.checkboxContainer}
-                  onPress={() =>
-                    setUsarDireccionRegistrada(!usarDireccionRegistrada)
-                  }
-                >
-                  <View
-                    style={[
-                      styles.checkbox,
-                      usarDireccionRegistrada && styles.checkboxChecked,
-                    ]}
-                  />
-                  <Text style={styles.label}>
-                    Usar dirección de entrega registrada
-                  </Text>
-                </Pressable>
-
-                {!usarDireccionRegistrada && (
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Dirección de entrega:</Text>
-                    <TextInput
-                      style={styles.campoTextoPago}
-                      onChangeText={setDireccionEspecifica}
-                      value={direccionEspecifica}
-                      placeholder="Ingresa tu dirección de entrega"
+                {direccionRegistrada ? (
+                  <Pressable
+                    style={styles.checkboxContainer}
+                    onPress={() =>
+                      setUsarDireccionRegistrada(!usarDireccionRegistrada)
+                    }
+                  >
+                    <View
+                      style={[
+                        styles.checkbox,
+                        usarDireccionRegistrada && styles.checkboxChecked,
+                      ]}
                     />
-                  </View>
-                )}
+                    <Text style={styles.label}>
+                      Usar dirección de entrega registrada
+                    </Text>
+                  </Pressable>
+                ) : null}
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Dirección de entrega:</Text>
+                  <TextInput
+                    style={styles.campoTextoPago}
+                    onChangeText={setDireccionEspecifica}
+                    value={
+                      usarDireccionRegistrada
+                        ? direccionRegistrada
+                        : direccionEspecifica
+                    }
+                    placeholder="Ingresa tu dirección de entrega"
+                    editable={!usarDireccionRegistrada}
+                  />
+                </View>
 
                 <View style={styles.centeredButtonContainer}>
                   <Pressable
