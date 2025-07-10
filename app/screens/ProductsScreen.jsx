@@ -685,7 +685,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   productsGridDesktop: {
-    flex: 3, // Takes 3 parts of space
+    flex: 3, // Takes 3 parts of space 
     justifyContent: 'flex-start', // Start aligning products from left
     paddingRight: 20, // Space before sidebar
   },
@@ -716,7 +716,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
     aspectRatio: 0.8, // Maintain aspect ratio for uniform cards
-    marginBottom: 10, // Added margin for spacing between rows
+    marginBottom: 120, // Added margin for spacing between rows
   },
   productContent: {
     flexDirection: 'column',
@@ -749,7 +749,7 @@ const styles = StyleSheet.create({
   },
   productImageContainer: {
     width: '100%',
-    height: 180,
+    height: 150,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
     elevation: 5,
     padding: 15, // 1.5em
-    maxHeight: '80%', // Adjusted for RN to prevent overflowing parent
+    maxHeight: '10%', // Adjusted for RN to prevent overflowing parent
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
