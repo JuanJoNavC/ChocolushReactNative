@@ -333,12 +333,12 @@ const PaymentsScreen = () => {
                     <View key={item.id} style={styles.productoItem}>
                       <Image
                         source={
-                          item.imagen ? { uri: item.imagen } : PlaceholderImage
+                          item.image ? { uri: item.image } : PlaceholderImage
                         }
                         style={styles.productoImagen}
                       />
                       <View style={styles.productoInfo}>
-                        <Text style={styles.productoNombre}>{item.nombre}</Text>
+                        <Text style={styles.productoNombre}>{item.name}</Text>
                         <Text style={styles.productoDetalle}>
                           Cantidad: {item.cantidad}
                         </Text>
