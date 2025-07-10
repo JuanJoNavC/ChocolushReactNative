@@ -9,12 +9,13 @@ import {
   Dimensions,
   Alert,
   ScrollView,
-  Platform, // Import Platform to handle OS-specific styles
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import axios from "axios";
 import { Picker } from "@react-native-picker/picker";
 import NavBarComponent from "../components/NavBarComponent";
+import FooterComponent from "../components/FooterComponent";
 import LogInImage from "../../assets/images/LogInImg2.webp";
 
 // Get screen dimensions for responsiveness
@@ -207,15 +208,9 @@ const SignUpScreen = () => {
             <View style={styles.registrationContainer}>
               <Text style={styles.registrationTitle}>Registro de Cliente</Text>
 
-              {/* FIXED: The layout now properly uses Flexbox for 3 columns */}
-              <View
-                style={[
-                  styles.registrationFormGrid,
-                  isMobile && styles.registrationFormGridMobile,
-                ]}
-              >
-                {/* Form Group: Nombre */}
-                <View style={styles.formGroupThreeCol}>
+              {/* FIXED: The layout is now explicitly defined in rows for reliability. */}
+              <View style={isMobile ? styles.formRowMobile : styles.formRow}>
+                <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>Nombre:</Text>
                   <TextInput
                     style={styles.formControl}
@@ -227,9 +222,7 @@ const SignUpScreen = () => {
                     placeholder="Nombre"
                   />
                 </View>
-
-                {/* Form Group: Apellido */}
-                <View style={styles.formGroupThreeCol}>
+                <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>Apellido:</Text>
                   <TextInput
                     style={styles.formControl}
@@ -241,9 +234,7 @@ const SignUpScreen = () => {
                     placeholder="Apellido"
                   />
                 </View>
-
-                {/* Form Group: Cédula */}
-                <View style={styles.formGroupThreeCol}>
+                <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>Cédula:</Text>
                   <TextInput
                     style={styles.formControl}
@@ -256,9 +247,10 @@ const SignUpScreen = () => {
                     placeholder="10 dígitos"
                   />
                 </View>
+              </View>
 
-                {/* Form Group: Correo */}
-                <View style={styles.formGroupThreeCol}>
+              <View style={isMobile ? styles.formRowMobile : styles.formRow}>
+                <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>Correo:</Text>
                   <TextInput
                     style={styles.formControl}
@@ -272,9 +264,7 @@ const SignUpScreen = () => {
                     placeholder="ejemplo@correo.com"
                   />
                 </View>
-
-                {/* Form Group: Teléfono */}
-                <View style={styles.formGroupThreeCol}>
+                <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>Teléfono:</Text>
                   <TextInput
                     style={styles.formControl}
@@ -287,9 +277,7 @@ const SignUpScreen = () => {
                     placeholder="Teléfono"
                   />
                 </View>
-
-                {/* Form Group: Dirección */}
-                <View style={styles.formGroupThreeCol}>
+                <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>Dirección:</Text>
                   <TextInput
                     style={styles.formControl}
@@ -301,9 +289,10 @@ const SignUpScreen = () => {
                     placeholder="Dirección"
                   />
                 </View>
+              </View>
 
-                {/* Form Group: Sector */}
-                <View style={styles.formGroupThreeCol}>
+              <View style={isMobile ? styles.formRowMobile : styles.formRow}>
+                <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>Sector:</Text>
                   <TextInput
                     style={styles.formControl}
@@ -315,9 +304,7 @@ const SignUpScreen = () => {
                     placeholder="Sector"
                   />
                 </View>
-
-                {/* Form Group: Fecha de Nacimiento */}
-                <View style={styles.formGroupThreeCol}>
+                <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>Fecha de Nacimiento:</Text>
                   <TextInput
                     style={styles.formControl}
@@ -328,9 +315,7 @@ const SignUpScreen = () => {
                     placeholder="YYYY-MM-DD"
                   />
                 </View>
-
-                {/* FIXED: Form Group: Sexo (Picker) */}
-                <View style={styles.formGroupThreeCol}>
+                <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>Sexo:</Text>
                   <View style={styles.pickerContainer}>
                     <Picker
@@ -347,8 +332,9 @@ const SignUpScreen = () => {
                     </Picker>
                   </View>
                 </View>
+              </View>
 
-                {/* Form Group: Contraseña */}
+              <View style={styles.formRow}>
                 <View style={styles.fullWidth}>
                   <Text style={styles.formLabel}>Contraseña:</Text>
                   <TextInput
@@ -363,8 +349,9 @@ const SignUpScreen = () => {
                     placeholder="Contraseña"
                   />
                 </View>
+              </View>
 
-                {/* Form Group: Confirmar Contraseña */}
+              <View style={styles.formRow}>
                 <View style={styles.fullWidth}>
                   <Text style={styles.formLabel}>Confirmar Contraseña:</Text>
                   <TextInput
@@ -411,7 +398,7 @@ const SignUpScreen = () => {
                     styles.cancelButton,
                     pressed && styles.buttonPressed,
                   ]}
-                  onPress={() => router.push("/LogInScreen")}
+                  onPress={() => router.push("/screens/LogInScreen")}
                   disabled={isSubmitting}
                 >
                   <Text style={styles.buttonText}>Ir a Login</Text>
@@ -430,6 +417,7 @@ const SignUpScreen = () => {
             </View>
           </View>
         </View>
+        <FooterComponent />
       </ScrollView>
     </View>
   );
@@ -488,23 +476,24 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "bold",
   },
-  registrationFormGrid: {
+  // NEW: Row layout for 3 columns
+  formRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
     justifyContent: "space-between",
-    rowGap: 20,
-    columnGap: 20,
+    width: "100%",
+    marginBottom: 20,
   },
-  registrationFormGridMobile: {
+  formRowMobile: {
     flexDirection: "column",
-    rowGap: 15,
+    width: "100%",
+    marginBottom: 0,
   },
-  // FIXED: Style to create 3 columns, with space for gaps
-  formGroupThreeCol: {
+  formGroup: {
     width: "30%",
   },
   fullWidth: {
     width: "100%",
+    marginBottom: 20, // Add margin to the full-width groups
   },
   formLabel: {
     marginBottom: 8,
@@ -521,7 +510,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: "#f8f8f8",
   },
-  // FIXED: Picker styles for consistent visibility
   pickerContainer: {
     width: "100%",
     borderWidth: 1,
@@ -534,12 +522,8 @@ const styles = StyleSheet.create({
   picker: {
     width: "100%",
     ...Platform.select({
-      ios: {
-        height: 120, // iOS Picker is a wheel, needs more height
-      },
-      android: {
-        height: 50, // Android Picker is a dropdown, needs less height
-      },
+      ios: { height: 120 },
+      android: { height: 50 },
     }),
   },
   formActions: {
