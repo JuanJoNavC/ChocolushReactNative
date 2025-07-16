@@ -22,9 +22,9 @@ const BrandsScreen = () => {
   // Make sure these paths are correct relative to this file
   const brandImages = {
     KitKat: require("../../assets/images/kitkat2.png"),
-    Brachs: require("../../assets/images/brachs-logo.png"),
-    Nerds: require("../../assets/images/nerds-logo.png"),
-    JellyBelly: require("../../assets/images/jelly-belly-logo.png"),
+    Brachs: require("../../assets/images/brachs-logo.webp"),
+    Nerds: require("../../assets/images/nerds-logo.webp"),
+    JellyBelly: require("../../assets/images/jelly-belly-logo.webp"),
     Feastables: require("../../assets/images/Feastables_logo_2023_Upscaled.png"),
     ChupaChups: require("../../assets/images/Chupa_Chups_logo.png"),
     Milka: require("../../assets/images/Milka-logo.png"),
