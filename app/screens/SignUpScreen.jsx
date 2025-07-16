@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useRouter } from "expo-router";
 import {
   StyleSheet,
   View,
@@ -17,7 +18,8 @@ import NavBarComponent from "../components/NavBarComponent"; // Assuming you hav
 
 // You'll need to set your API_BASE_URL.
 // For React Native, you might use an environment file or directly define it.
-const API_BASE_URL = "YOUR_API_CONNECTION_STRING_HERE"; // Replace with your actual API base URL
+const API_BASE_URL = "https://backendchocolush.runasp.net"; // Replace with your actual API base URL
+const router = useRouter();
 
 const RegisterClientScreen = ({ navigation }) => {
   const [client, setClient] = useState({
@@ -109,7 +111,7 @@ const RegisterClientScreen = ({ navigation }) => {
           text: "¡Registro exitoso! Ahora puedes iniciar sesión.",
         });
         setTimeout(() => {
-          navigation.navigate("Login"); // Navigate to your Login screen
+          router.push("/screens/LogInScreen");
         }, 2000);
       }
     } catch (err) {
@@ -346,7 +348,7 @@ const RegisterClientScreen = ({ navigation }) => {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.cancelButton}
-                  onPress={() => navigation.navigate("Login")}
+                  onPress={() => router.push("/screens/LogInScreen")}
                   disabled={isSubmitting}
                 >
                   <Text style={styles.buttonText}>Ir a Login</Text>
@@ -357,7 +359,7 @@ const RegisterClientScreen = ({ navigation }) => {
               ¿Ya tienes cuenta?{" "}
               <Text
                 style={styles.loginLink}
-                onPress={() => navigation.navigate("Login")}
+                onPress={() => router.push("/screens/LogInScreen")}
               >
                 Inicia Sesión
               </Text>
