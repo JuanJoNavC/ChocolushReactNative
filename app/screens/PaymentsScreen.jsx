@@ -113,7 +113,7 @@ const PaymentsScreen = () => {
             "Carrito Vacío",
             "Tu carrito está vacío. Redirigiendo a la página de productos."
           );
-          router.push("/products");
+          router.push("/screens/IndexScreen");
           return;
         }
 
@@ -288,7 +288,7 @@ const PaymentsScreen = () => {
         "Pago Exitoso",
         "Compra interna pagada exitosamente. ¡Gracias por tu dinero!"
       );
-      router.push("/products");
+      router.push("/screens/IndexScreen");
     } catch (error) {
       console.error("Error en el proceso de pago:", error);
       let errorMessage =

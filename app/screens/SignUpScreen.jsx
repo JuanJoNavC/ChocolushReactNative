@@ -1,116 +1,81 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import {
+  StyleSheet,
   View,
   Text,
-  StyleSheet,
-  Image,
   TextInput,
-  Pressable,
-  Dimensions,
-  Alert,
+  TouchableOpacity,
   ScrollView,
+  Alert,
+  ActivityIndicator,
   Platform,
 } from "react-native";
-import { useRouter } from "expo-router";
 import axios from "axios";
-import { Picker } from "@react-native-picker/picker";
-import NavBarComponent from "../components/NavBarComponent";
-import FooterComponent from "../components/FooterComponent";
-import LogInImage from "../../assets/images/LogInImg2.webp";
+import { Picker } from "@react-native-picker/picker"; // For dropdown
+import DateTimePicker from "@react-native-community/datetimepicker"; // For date picker
+import NavBarComponent from "../components/NavBarComponent"; // Assuming you have a NavBarComponent for React Native
 
-// Get screen dimensions for responsiveness
-const { width } = Dimensions.get("window");
+// You'll need to set your API_BASE_URL.
+// For React Native, you might use an environment file or directly define it.
+const API_BASE_URL = "YOUR_API_CONNECTION_STRING_HERE"; // Replace with your actual API base URL
 
-// Base URL for API calls
-const API_BASE_URL = "https://backendchocolush.runasp.net";
-
-// Function to validate Ecuadorian ID (Cedula)
-const validateCedula = (cedula) => {
-  if (!/^\d{10}$/.test(cedula)) {
-    return "La cédula debe tener 10 dígitos.";
-  }
-  const coeficientes = [2, 1, 2, 1, 2, 1, 2, 1, 2];
-  let suma = 0;
-  for (let i = 0; i < 9; i++) {
-    let digito = parseInt(cedula[i]) * coeficientes[i];
-    if (digito >= 10) {
-      digito -= 9;
-    }
-    suma += digito;
-  }
-  const ultimoDigito = parseInt(cedula[9]);
-  const digitoVerificador = suma % 10 === 0 ? 0 : 10 - (suma % 10);
-  if (digitoVerificador !== ultimoDigito) {
-    return "Cédula inválida.";
-  }
-  return "";
-};
-
-// Function to validate age (must be 18+)
-const validateAge = (dob) => {
-  if (!dob) return "La fecha de nacimiento es requerida.";
-  const birthDate = new Date(dob);
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const m = today.getMonth() - birthDate.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  if (age < 18) {
-    return "Debes ser mayor de 18 años para registrarte.";
-  }
-  return "";
-};
-
-const SignUpScreen = () => {
-  const router = useRouter();
+const RegisterClientScreen = ({ navigation }) => {
   const [client, setClient] = useState({
     CLI_NOMBRE: "",
     CLI_APELLIDO: "",
-    CLI_FECHANACIMIENTO: "",
+    CLI_FECHANACIMIENTO: "", // YYYY-MM-DD
     CLI_CORREO: "",
-    CLI_SEXO: "",
+    CLI_SEXO: "", // 'M', 'F', 'O'
     CLI_DIRECCION: "",
     CLI_CLAVE: "",
     CLI_CEDULA: "",
     CLI_TELEFONO: "",
     CLI_SECTOR: "",
   });
+
   const [confirmPassword, setConfirmPassword] = useState("");
   const [formMessage, setFormMessage] = useState({
-    type: "",
+    type: "", // 'success' or 'error'
     text: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // Check screen dimensions for responsiveness
-  useEffect(() => {
-    const updateDimensions = () => {
-      setIsMobile(Dimensions.get("window").width <= 900);
-    };
-    updateDimensions();
+  // Validation functions
+  const validateCedula = (cedula) => {
+    if (!/^\d{10}$/.test(cedula)) {
+      return "La cédula debe tener 10 dígitos.";
+    }
+    const coeficientes = [2, 1, 2, 1, 2, 1, 2, 1, 2];
+    let suma = 0;
+    for (let i = 0; i < 9; i++) {
+      let digito = parseInt(cedula[i]) * coeficientes[i];
+      if (digito >= 10) {
+        digito -= 9;
+      }
+      suma += digito;
+    }
+    const ultimoDigito = parseInt(cedula[9]);
+    const digitoVerificador = suma % 10 === 0 ? 0 : 10 - (suma % 10);
+    if (digitoVerificador !== ultimoDigito) {
+      return "Cédula inválida.";
+    }
+    return "";
+  };
 
-    const subscription = Dimensions.addEventListener(
-      "change",
-      updateDimensions
-    );
-    return () => subscription?.remove();
-  }, []);
-
-  // Handle scroll for NavBarComponent effect
-  const handleScroll = useCallback((event) => {
-    const scrollY = event.nativeEvent.contentOffset.y;
-    setIsScrolled(scrollY > 100);
-  }, []);
-
-  // Update client state for a specific field
-  const handleClientChange = (field, value) => {
-    setClient((prevClient) => ({
-      ...prevClient,
-      [field]: value,
-    }));
+  const validateAge = (dob) => {
+    if (!dob) return "La fecha de nacimiento es requerida.";
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    if (age < 18) {
+      return "Debes ser mayor de 18 años para registrarte.";
+    }
+    return "";
   };
 
   const registerClient = async () => {
@@ -119,16 +84,6 @@ const SignUpScreen = () => {
 
     let validationErrors = [];
 
-    // NEW: Check if the birth date is in the future
-    const dobDate = new Date(client.CLI_FECHANACIMIENTO);
-    const today = new Date();
-    if (dobDate > today) {
-      validationErrors.push(
-        "La fecha de nacimiento no puede ser una fecha futura."
-      );
-    }
-
-    // Existing validations
     const cedulaError = validateCedula(client.CLI_CEDULA);
     if (cedulaError) validationErrors.push(cedulaError);
 
@@ -153,13 +108,13 @@ const SignUpScreen = () => {
           type: "success",
           text: "¡Registro exitoso! Ahora puedes iniciar sesión.",
         });
-        Alert.alert("Registro Exitoso", "¡Ahora puedes iniciar sesión!");
         setTimeout(() => {
-          router.push("/LogInScreen");
+          navigation.navigate("Login"); // Navigate to your Login screen
         }, 2000);
       }
     } catch (err) {
       console.error("Error al registrar cliente:", err);
+
       let errorMessage = "No se pudo completar el registro.";
       if (err.response && err.response.data) {
         if (typeof err.response.data === "string") {
@@ -172,208 +127,205 @@ const SignUpScreen = () => {
       } else if (err.message) {
         errorMessage += " " + err.message;
       }
+
       setFormMessage({ type: "error", text: errorMessage });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const onDateChange = (event, selectedDate) => {
+    setShowDatePicker(Platform.OS === "ios");
+    if (selectedDate) {
+      const formattedDate = selectedDate.toISOString().split("T")[0];
+      setClient({ ...client, CLI_FECHANACIMIENTO: formattedDate });
+    }
+  };
+
   return (
     <View style={styles.registrationPageWrapper}>
-      <NavBarComponent isScrolled={isScrolled} />
-      <ScrollView
-        style={styles.mainScrollContainer}
-        contentContainerStyle={styles.mainScrollContent}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-      >
-        <View style={styles.navbarSpacer} />
-        <View
-          style={[
-            styles.registrationContentArea,
-            isMobile && styles.registrationContentAreaMobile,
-          ]}
-        >
-          {!isMobile && (
-            <View style={styles.registrationMediaSection}>
-              <Image
-                source={LogInImage}
-                alt="Personaje Caminando"
-                style={styles.mediaImage}
-              />
-            </View>
-          )}
-
-          <View style={styles.registrationFormSection}>
-            <View style={styles.registrationContainer}>
-              <Text style={styles.registrationTitle}>Registro de Cliente</Text>
-
-              {/* FIXED: The layout is now explicitly defined in rows for reliability. */}
-              <View style={isMobile ? styles.formRowMobile : styles.formRow}>
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Nombre:</Text>
-                  <TextInput
-                    style={styles.formControl}
-                    value={client.CLI_NOMBRE}
-                    onChangeText={(text) =>
-                      handleClientChange("CLI_NOMBRE", text)
+      <NavBarComponent />
+      <ScrollView contentContainerStyle={styles.scrollViewContent}>
+        <View style={styles.registrationFormSection}>
+          <View style={styles.registrationContainer}>
+            <Text style={styles.registrationTitle}>Registro de Cliente</Text>
+            <View style={styles.formGrid}>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Nombre:</Text>
+                <TextInput
+                  style={styles.formControl}
+                  value={client.CLI_NOMBRE}
+                  onChangeText={(text) =>
+                    setClient({ ...client, CLI_NOMBRE: text })
+                  }
+                  placeholder="Nombre"
+                  maxLength={30}
+                  keyboardType="default"
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Apellido:</Text>
+                <TextInput
+                  style={styles.formControl}
+                  value={client.CLI_APELLIDO}
+                  onChangeText={(text) =>
+                    setClient({ ...client, CLI_APELLIDO: text })
+                  }
+                  placeholder="Apellido"
+                  maxLength={30}
+                  keyboardType="default"
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Cédula:</Text>
+                <TextInput
+                  style={styles.formControl}
+                  value={client.CLI_CEDULA}
+                  onChangeText={(text) =>
+                    setClient({ ...client, CLI_CEDULA: text })
+                  }
+                  placeholder="Cédula"
+                  maxLength={10}
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Correo:</Text>
+                <TextInput
+                  style={styles.formControl}
+                  value={client.CLI_CORREO}
+                  onChangeText={(text) =>
+                    setClient({ ...client, CLI_CORREO: text })
+                  }
+                  placeholder="Correo Electrónico"
+                  maxLength={50}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Teléfono:</Text>
+                <TextInput
+                  style={styles.formControl}
+                  value={client.CLI_TELEFONO}
+                  onChangeText={(text) =>
+                    setClient({ ...client, CLI_TELEFONO: text })
+                  }
+                  placeholder="Teléfono"
+                  maxLength={15}
+                  keyboardType="phone-pad"
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Dirección:</Text>
+                <TextInput
+                  style={styles.formControl}
+                  value={client.CLI_DIRECCION}
+                  onChangeText={(text) =>
+                    setClient({ ...client, CLI_DIRECCION: text })
+                  }
+                  placeholder="Dirección"
+                  maxLength={80}
+                  keyboardType="default"
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Sector:</Text>
+                <TextInput
+                  style={styles.formControl}
+                  value={client.CLI_SECTOR}
+                  onChangeText={(text) =>
+                    setClient({ ...client, CLI_SECTOR: text })
+                  }
+                  placeholder="Sector"
+                  maxLength={50}
+                  keyboardType="default"
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Fecha de Nacimiento:</Text>
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker(true)}
+                  style={styles.datePickerButton}
+                >
+                  <Text style={styles.datePickerButtonText}>
+                    {client.CLI_FECHANACIMIENTO || "Seleccionar Fecha"}
+                  </Text>
+                </TouchableOpacity>
+                {showDatePicker && (
+                  <DateTimePicker
+                    testID="dateTimePicker"
+                    value={
+                      client.CLI_FECHANACIMIENTO
+                        ? new Date(client.CLI_FECHANACIMIENTO)
+                        : new Date()
                     }
-                    maxLength={30}
-                    placeholder="Nombre"
+                    mode="date"
+                    display="default"
+                    maximumDate={new Date()}
+                    onChange={onDateChange}
                   />
-                </View>
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Apellido:</Text>
-                  <TextInput
-                    style={styles.formControl}
-                    value={client.CLI_APELLIDO}
-                    onChangeText={(text) =>
-                      handleClientChange("CLI_APELLIDO", text)
+                )}
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Sexo:</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={client.CLI_SEXO}
+                    onValueChange={(itemValue) =>
+                      setClient({ ...client, CLI_SEXO: itemValue })
                     }
-                    maxLength={30}
-                    placeholder="Apellido"
-                  />
-                </View>
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Cédula:</Text>
-                  <TextInput
-                    style={styles.formControl}
-                    value={client.CLI_CEDULA}
-                    onChangeText={(text) =>
-                      handleClientChange("CLI_CEDULA", text)
-                    }
-                    maxLength={10}
-                    keyboardType="numeric"
-                    placeholder="10 dígitos"
-                  />
+                    style={styles.formControlPicker}
+                  >
+                    <Picker.Item label="Selecciona tu sexo" value="" />
+                    <Picker.Item label="Masculino" value="M" />
+                    <Picker.Item label="Femenino" value="F" />
+                    <Picker.Item label="Otro" value="O" />
+                  </Picker>
                 </View>
               </View>
-
-              <View style={isMobile ? styles.formRowMobile : styles.formRow}>
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Correo:</Text>
-                  <TextInput
-                    style={styles.formControl}
-                    value={client.CLI_CORREO}
-                    onChangeText={(text) =>
-                      handleClientChange("CLI_CORREO", text)
-                    }
-                    maxLength={50}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    placeholder="ejemplo@correo.com"
-                  />
-                </View>
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Teléfono:</Text>
-                  <TextInput
-                    style={styles.formControl}
-                    value={client.CLI_TELEFONO}
-                    onChangeText={(text) =>
-                      handleClientChange("CLI_TELEFONO", text)
-                    }
-                    maxLength={15}
-                    keyboardType="phone-pad"
-                    placeholder="Teléfono"
-                  />
-                </View>
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Dirección:</Text>
-                  <TextInput
-                    style={styles.formControl}
-                    value={client.CLI_DIRECCION}
-                    onChangeText={(text) =>
-                      handleClientChange("CLI_DIRECCION", text)
-                    }
-                    maxLength={80}
-                    placeholder="Dirección"
-                  />
-                </View>
+              <View style={[styles.formGroup, styles.fullWidth]}>
+                <Text style={styles.formLabel}>Contraseña:</Text>
+                <TextInput
+                  style={styles.formControl}
+                  value={client.CLI_CLAVE}
+                  onChangeText={(text) =>
+                    setClient({ ...client, CLI_CLAVE: text })
+                  }
+                  placeholder="Contraseña"
+                  secureTextEntry
+                  minLength={6}
+                  maxLength={30}
+                />
               </View>
-
-              <View style={isMobile ? styles.formRowMobile : styles.formRow}>
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Sector:</Text>
-                  <TextInput
-                    style={styles.formControl}
-                    value={client.CLI_SECTOR}
-                    onChangeText={(text) =>
-                      handleClientChange("CLI_SECTOR", text)
-                    }
-                    maxLength={50}
-                    placeholder="Sector"
-                  />
-                </View>
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Fecha de Nacimiento:</Text>
-                  <TextInput
-                    style={styles.formControl}
-                    value={client.CLI_FECHANACIMIENTO}
-                    onChangeText={(text) =>
-                      handleClientChange("CLI_FECHANACIMIENTO", text)
-                    }
-                    placeholder="YYYY-MM-DD"
-                  />
-                </View>
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Sexo:</Text>
-                  <View style={styles.pickerContainer}>
-                    <Picker
-                      selectedValue={client.CLI_SEXO}
-                      onValueChange={(itemValue) =>
-                        handleClientChange("CLI_SEXO", itemValue)
-                      }
-                      style={styles.picker}
-                    >
-                      <Picker.Item label="Selecciona" value="" />
-                      <Picker.Item label="Masculino" value="M" />
-                      <Picker.Item label="Femenino" value="F" />
-                      <Picker.Item label="Otro" value="O" />
-                    </Picker>
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <View style={styles.fullWidth}>
-                  <Text style={styles.formLabel}>Contraseña:</Text>
-                  <TextInput
-                    style={styles.formControl}
-                    value={client.CLI_CLAVE}
-                    onChangeText={(text) =>
-                      handleClientChange("CLI_CLAVE", text)
-                    }
-                    secureTextEntry={true}
-                    maxLength={30}
-                    minLength={6}
-                    placeholder="Contraseña"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <View style={styles.fullWidth}>
-                  <Text style={styles.formLabel}>Confirmar Contraseña:</Text>
-                  <TextInput
-                    style={styles.formControl}
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    secureTextEntry={true}
-                    maxLength={30}
-                    minLength={6}
-                    placeholder="Confirmar"
-                  />
-                </View>
+              <View style={[styles.formGroup, styles.fullWidth]}>
+                <Text style={styles.formLabel}>Confirmar Contraseña:</Text>
+                <TextInput
+                  style={styles.formControl}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholder="Confirmar Contraseña"
+                  secureTextEntry
+                  minLength={6}
+                  maxLength={30}
+                />
               </View>
 
               {formMessage.text ? (
-                <View style={[styles.formMessage, styles[formMessage.type]]}>
+                <View
+                  style={[
+                    styles.formMessage,
+                    formMessage.type === "success"
+                      ? styles.formMessageSuccess
+                      : styles.formMessageError,
+                  ]}
+                >
                   <Text
-                    style={[
+                    style={
                       formMessage.type === "success"
-                        ? styles.successText
-                        : styles.errorText,
-                    ]}
+                        ? styles.formMessageSuccessText
+                        : styles.formMessageErrorText
+                    }
                   >
                     {formMessage.text}
                   </Text>
@@ -381,43 +333,37 @@ const SignUpScreen = () => {
               ) : null}
 
               <View style={styles.formActions}>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.registerButton,
-                    pressed && styles.buttonPressed,
-                  ]}
+                <TouchableOpacity
+                  style={styles.registerButton}
                   onPress={registerClient}
                   disabled={isSubmitting}
                 >
-                  <Text style={styles.buttonText}>
-                    {isSubmitting ? "Registrando..." : "Registrarse"}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.cancelButton,
-                    pressed && styles.buttonPressed,
-                  ]}
-                  onPress={() => router.push("/screens/LogInScreen")}
+                  {isSubmitting ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.buttonText}>Registrarse</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => navigation.navigate("Login")}
                   disabled={isSubmitting}
                 >
                   <Text style={styles.buttonText}>Ir a Login</Text>
-                </Pressable>
+                </TouchableOpacity>
               </View>
-
-              <Text style={styles.loginText}>
-                ¿Ya tienes cuenta?{" "}
-                <Text
-                  style={styles.loginLink}
-                  onPress={() => router.push("/LogInScreen")}
-                >
-                  Inicia Sesión
-                </Text>
-              </Text>
             </View>
+            <Text style={styles.loginText}>
+              ¿Ya tienes cuenta?{" "}
+              <Text
+                style={styles.loginLink}
+                onPress={() => navigation.navigate("Login")}
+              >
+                Inicia Sesión
+              </Text>
+            </Text>
           </View>
         </View>
-        <FooterComponent />
       </ScrollView>
     </View>
   );
@@ -427,129 +373,114 @@ const styles = StyleSheet.create({
   registrationPageWrapper: {
     flex: 1,
     backgroundColor: "#FFF2E0",
+    paddingTop: 60, // Space for the NavBar (adjust as needed)
   },
-  mainScrollContainer: {
-    flex: 1,
-  },
-  mainScrollContent: {
+  scrollViewContent: {
     flexGrow: 1,
-  },
-  navbarSpacer: {
-    height: 80,
-    backgroundColor: "transparent",
-  },
-  registrationContentArea: {
-    flexDirection: "row",
-    flex: 1,
-  },
-  registrationContentAreaMobile: {
-    flexDirection: "column",
-  },
-  registrationMediaSection: {
-    flex: 1,
-    backgroundColor: "#664400",
     justifyContent: "center",
     alignItems: "center",
-  },
-  mediaImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
   },
   registrationFormSection: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    width: "100%",
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#ffffff",
     paddingVertical: 20,
   },
   registrationContainer: {
-    width: "100%",
+    width: "90%",
     maxWidth: 550,
-    alignItems: "center",
     padding: 20,
+    borderRadius: 10,
+    backgroundColor: "#ffffff",
   },
   registrationTitle: {
     textAlign: "center",
     color: "#A63700",
-    marginBottom: 25,
-    fontSize: 32,
+    marginBottom: 30,
+    fontSize: 28,
     fontWeight: "bold",
   },
-  // NEW: Row layout for 3 columns
-  formRow: {
+  formGrid: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
-    width: "100%",
-    marginBottom: 20,
-  },
-  formRowMobile: {
-    flexDirection: "column",
-    width: "100%",
-    marginBottom: 0,
   },
   formGroup: {
-    width: "30%",
+    width: "48%", // Two columns
+    marginBottom: 15,
   },
   fullWidth: {
     width: "100%",
-    marginBottom: 20, // Add margin to the full-width groups
   },
   formLabel: {
     marginBottom: 8,
     color: "#664400",
     fontWeight: "bold",
+    fontSize: 16,
   },
   formControl: {
-    width: "100%",
-    paddingVertical: 12,
-    paddingHorizontal: 15,
     borderWidth: 1,
     borderColor: "#e0e0e0",
     borderRadius: 8,
+    padding: 12,
     fontSize: 16,
     backgroundColor: "#f8f8f8",
   },
   pickerContainer: {
-    width: "100%",
     borderWidth: 1,
     borderColor: "#e0e0e0",
     borderRadius: 8,
     backgroundColor: "#f8f8f8",
-    overflow: "hidden",
-    justifyContent: "center",
+    overflow: "hidden", // Ensures picker stays within bounds
   },
-  picker: {
+  formControlPicker: {
+    height: 50, // Standard height for pickers
     width: "100%",
-    ...Platform.select({
-      ios: { height: 120 },
-      android: { height: 50 },
-    }),
+  },
+  datePickerButton: {
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: "#f8f8f8",
+    justifyContent: "center",
+    height: 50,
+  },
+  datePickerButtonText: {
+    fontSize: 16,
+    color: "#000", // Or a lighter color if it's a placeholder
   },
   formActions: {
     flexDirection: "row",
-    justifyContent: "center",
-    gap: 20,
+    justifyContent: "space-around",
     marginTop: 25,
+    width: "100%",
   },
   registerButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
     backgroundColor: "#A65300",
+    paddingVertical: 12,
+    paddingHorizontal: 25,
     borderRadius: 8,
-    justifyContent: "center",
     alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row", // For icon and text
+    gap: 8, // Space between icon and text
+    flex: 1, // Distribute space
+    marginHorizontal: 5,
   },
   cancelButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
     backgroundColor: "#DC3545",
+    paddingVertical: 12,
+    paddingHorizontal: 25,
     borderRadius: 8,
-    justifyContent: "center",
     alignItems: "center",
-  },
-  buttonPressed: {
-    opacity: 0.7,
+    justifyContent: "center",
+    flexDirection: "row", // For icon and text
+    gap: 8, // Space between icon and text
+    flex: 1, // Distribute space
+    marginHorizontal: 5,
   },
   buttonText: {
     color: "white",
@@ -559,40 +490,60 @@ const styles = StyleSheet.create({
   formMessage: {
     width: "100%",
     padding: 15,
-    marginTop: 15,
     borderRadius: 8,
-    textAlign: "center",
+    marginTop: 15,
+    alignItems: "center",
   },
-  success: {
+  formMessageSuccess: {
     backgroundColor: "#D4EDDA",
-    borderWidth: 1,
     borderColor: "#C3E6CB",
-  },
-  successText: {
-    color: "#155724",
-    textAlign: "center",
-    fontWeight: "bold",
-  },
-  error: {
-    backgroundColor: "#F8D7DA",
     borderWidth: 1,
-    borderColor: "#F5C6CB",
   },
-  errorText: {
-    color: "#721C24",
-    textAlign: "center",
+  formMessageSuccessText: {
+    color: "#155724",
     fontWeight: "bold",
+    textAlign: "center",
+  },
+  formMessageError: {
+    backgroundColor: "#F8D7DA",
+    borderColor: "#F5C6CB",
+    borderWidth: 1,
+  },
+  formMessageErrorText: {
+    color: "#721C24",
+    fontWeight: "bold",
+    textAlign: "center",
   },
   loginText: {
     textAlign: "center",
     marginTop: 25,
     color: "#664400",
+    fontSize: 15,
   },
   loginLink: {
     color: "#A63700",
     fontWeight: "bold",
     textDecorationLine: "underline",
   },
+  // Responsive adjustments for smaller screens
+  "@media (max-width: 600px)": {
+    formGroup: {
+      width: "100%", // Single column on small screens
+    },
+    registrationTitle: {
+      fontSize: 24,
+    },
+    formActions: {
+      flexDirection: "column",
+    },
+    registerButton: {
+      marginHorizontal: 0,
+      marginBottom: 10,
+    },
+    cancelButton: {
+      marginHorizontal: 0,
+    },
+  },
 });
 
-export default SignUpScreen;
+export default RegisterClientScreen;
