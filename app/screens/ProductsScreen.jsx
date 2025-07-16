@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -7,91 +7,164 @@ import {
   Pressable,
   ScrollView,
   Dimensions,
-  ActivityIndicator, // For the loader
-  Alert, // For showing alerts to the user
-  TextInput, // For the search input
-  Animated, // For cart window animation
-  Easing, // For easing functions in animations
+  ActivityIndicator,
+  Alert,
+  TextInput,
+  Animated,
+  Easing,
 } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router"; // For navigation and URL params
-
-// Import your shared components
+import { useRouter, useLocalSearchParams } from "expo-router";
 import NavBarComponent from "../components/NavBarComponent";
 import FooterComponent from "../components/FooterComponent";
-
-// Import Axios for API calls
 import axios from "axios";
-
-// Import AsyncStorage for persistent cart storage
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-// Import FontAwesome for icons
 import { FontAwesome } from "@expo/vector-icons";
 
-// Get screen dimensions for responsiveness
 const { width } = Dimensions.get("window");
+// Cambiamos la URL base para apuntar a la nueva API de productos
+const API_BASE_URL = "http://backendchocolush.runasp.net";
 
-// Base URL for API calls
-// IMPORTANT: Replace this with your actual environment variable or hardcoded string if not using Vite
-const API_BASE_URL = "https://backendchocolush.runasp.net"; // Assuming base URL is up to .net
+// --- NUEVO COMPONENTE DE CARRUSEL DE IMÁGENES ---
+const ProductImageCarousel = ({ images }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  // Define un tamaño fijo y consistente para las imágenes del carrusel.
+  // Este tamaño debe coincidir con el del contenedor (productImageContainer).
+  const imageStyle = {
+    width: 120,
+    height: 120,
+  };
+
+  const onScroll = (event) => {
+    const slideSize = event.nativeEvent.layoutMeasurement.width;
+    const index = Math.round(event.nativeEvent.contentOffset.x / slideSize);
+    if (index !== activeIndex) {
+      setActiveIndex(index);
+    }
+  };
+
+  // Si no hay imágenes o el array está vacío, muestra un placeholder.
+  if (!images || images.length === 0) {
+    return (
+      <View style={styles.productImageContainer}>
+        <Image
+          source={{ uri: "https://via.placeholder.com/150" }} // Placeholder
+          style={styles.productImage}
+        />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.carouselContainer}>
+      <ScrollView
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={onScroll}
+        style={styles.carouselScrollView}
+      >
+        {images.map((uri, index) => (
+          <Image
+            key={index}
+            source={{ uri }}
+            style={imageStyle} // Usamos el estilo con tamaño fijo.
+            resizeMode="cover"
+          />
+        ))}
+      </ScrollView>
+      <View style={styles.paginationContainer}>
+        {images.map((_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.paginationDot,
+              index === activeIndex && styles.paginationDotActive,
+            ]}
+          />
+        ))}
+      </View>
+    </View>
+  );
+};
+// --- FIN DEL NUEVO COMPONENTE ---
 
 const ProductsScreen = () => {
-  const [products, setProducts] = useState([]); // All fetched products
-  const [cart, setCart] = useState([]); // Items in the cart
-  const [isMobile, setIsMobile] = useState(false); // Tracks if current width is mobile
-  const [showCartWindow, setShowCartWindow] = useState(false); // Controls visibility of mobile cart window
-  const [showMobileBubble, setShowMobileBubble] = useState(false); // Controls mobile cart bubble visibility
-  const [loading, setLoading] = useState(false); // Indicates if products are loading
-  const [searchQuery, setSearchQuery] = useState(""); // Search query for filtering
-  const [isScrolled, setIsScrolled] = useState(false); // For NavBarComponent scroll effect
+  const [products, setProducts] = useState([]);
+  const [cart, setCart] = useState([]);
+  const [isMobile, setIsMobile] = useState(false);
+  const [showCartWindow, setShowCartWindow] = useState(false);
+  const [showMobileBubble, setShowMobileBubble] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isScrolled, setIsScrolled] = useState(false);
 
-  const router = useRouter(); // Expo Router's router instance
-  const localSearchParams = useLocalSearchParams(); // Get URL query parameters
-  const { brand } = localSearchParams; // Destructure 'brand' from query params
+  const router = useRouter();
+  const localSearchParams = useLocalSearchParams();
+  // Mantenemos 'brand' aquí si lo vas a usar para filtrar con la nueva API
+  // Aunque en el ejemplo de la API que quieres usar, no se ve un endpoint para filtrar por marca directamente.
+  // Si necesitas filtrar por marca, tendrías que hacerlo del lado del cliente después de cargar todos los productos.
+  const { brand } = localSearchParams;
 
-  // Animated value for the cart window slide-in/out
-  const cartWindowAnim = React.useRef(new Animated.Value(width)).current;
+  const cartWindowAnim = useRef(new Animated.Value(width)).current;
 
-  // Handles scroll for the NavBarComponent
   const handleScroll = useCallback((event) => {
     const scrollY = event.nativeEvent.contentOffset.y;
-    setIsScrolled(scrollY > 100); // Adjust this threshold as needed for navbar
+    setIsScrolled(scrollY > 100);
   }, []);
 
-  // Function to fetch products from the API
+  // --- FUNCIÓN DE FETCH MODIFICADA ---
   const fetchAllOrBrandProducts = useCallback(async () => {
-    setLoading(true); // Start loading
-    const apiUrl = brand
-      ? `${API_BASE_URL}/api/Producto/brand?brand=${encodeURIComponent(brand)}`
-      : `${API_BASE_URL}/api/Producto`;
+    setLoading(true);
+    const apiUrl = `${API_BASE_URL}/api/Producto`; // Nuevo endpoint
 
     try {
       const response = await axios.get(apiUrl);
-      setProducts(response.data); // Update products state
+      // Mapeamos la respuesta de la nueva API a la estructura que el componente espera
+      const mappedProducts = response.data.map((p) => {
+        // PROD_IMG es una cadena, la convertimos a un array de strings si hay múltiples URLs
+        const imageUrls = p.PROD_IMG ? p.PROD_IMG.split(',') : [];
+        return {
+          PROD_ID: p.PROD_ID,
+          PROD_NOMBRE: p.PROD_NOMBRE,
+          PROD_DESCCORTA: p.PROD_DESCCORTA || p.PROD_DESC, // Usamos DESCCORTA si existe, sino DESC
+          PROD_DESC: p.PROD_DESC,
+          PROD_PRECIO: p.PROD_PRECIO,
+          PROD_STOCK: p.PROD_STOCK,
+          PROD_IMG: imageUrls.map(url => url.trim()), // Trim para limpiar espacios en blanco
+          PROD_BRAND: p.PROD_BRAND, // Agregamos PROD_BRAND
+        };
+      });
+
+      // Si 'brand' está presente en los parámetros locales, filtramos por marca
+      if (brand) {
+        const filteredByBrand = mappedProducts.filter(
+          (p) => p.PROD_BRAND && p.PROD_BRAND.toLowerCase() === brand.toLowerCase()
+        );
+        setProducts(filteredByBrand);
+      } else {
+        setProducts(mappedProducts);
+      }
     } catch (error) {
       console.error("Error al cargar productos:", error);
       Alert.alert(
         "Error",
         "No se pudieron cargar los productos. Intenta de nuevo más tarde."
       );
-      setProducts([]); // Clear products on error
+      setProducts([]);
     } finally {
-      setLoading(false); // End loading
+      setLoading(false);
     }
-  }, [brand]); // Re-fetch if brand changes
+  }, [brand]); // 'brand' se agrega como dependencia para que se refetch si cambia
 
-  // Computed property (useMemo) to filter products based on the search query
   const filteredProducts = useMemo(() => {
-    if (!searchQuery) {
-      return products; // If no search query, return all products
-    }
-    const query = searchQuery.toLowerCase(); // Convert query to lowercase for case-insensitive search
-    return products.filter(
-      (prod) => prod.PROD_NOMBRE.toLowerCase().includes(query) // Filter by product name
+    if (!searchQuery) return products;
+    const query = searchQuery.toLowerCase();
+    return products.filter((prod) =>
+      prod.PROD_NOMBRE.toLowerCase().includes(query)
     );
-  }, [products, searchQuery]); // Re-filter if products or searchQuery changes
+  }, [products, searchQuery]);
 
-  // Save cart to AsyncStorage
   const saveCart = useCallback(async (currentCart) => {
     try {
       await AsyncStorage.setItem("carrito", JSON.stringify(currentCart));
@@ -101,49 +174,38 @@ const ProductsScreen = () => {
     }
   }, []);
 
-  // Load cart from AsyncStorage
   const loadCart = useCallback(async () => {
     try {
       const savedCart = await AsyncStorage.getItem("carrito");
-      if (savedCart) {
-        setCart(JSON.parse(savedCart));
-      }
+      if (savedCart) setCart(JSON.parse(savedCart));
     } catch (e) {
       console.error("Error loading cart from AsyncStorage:", e);
     }
   }, []);
 
-  // Add a product to the shopping cart
+  // --- FUNCIÓN addToCart MODIFICADA ---
   const addToCart = useCallback(
-    (id, name, price, image, quantity = 1) => {
-      const numericPrice = parseFloat(price); // Convert price string to number
+    (id, name, price, images, quantity = 1) => { // 'images' ahora es un array
+      const numericPrice = parseFloat(price);
       setCart((prevCart) => {
         const existingProduct = prevCart.find((item) => item.name === name);
         let newCart;
         if (existingProduct) {
-          // If product already in cart, increment quantity
           newCart = prevCart.map((item) =>
             item.name === name
               ? { ...item, quantity: item.quantity + quantity }
               : item
           );
         } else {
-          // Otherwise, add new product to cart
           newCart = [
             ...prevCart,
-            {
-              id: id,
-              name: name,
-              price: numericPrice,
-              quantity: quantity,
-              image: image,
-            },
+            // Guardamos solo la primera imagen para mostrar en el carrito, o un placeholder
+            { id, name, price: numericPrice, quantity, image: images.length > 0 ? images[0] : "https://via.placeholder.com/60" },
           ];
         }
-        saveCart(newCart); // Save updated cart
+        saveCart(newCart);
         if (isMobile) {
-          setShowCartWindow(true); // Auto-open cart window on mobile
-          // Animate in the cart window
+          setShowCartWindow(true);
           Animated.timing(cartWindowAnim, {
             toValue: 0,
             duration: 300,
@@ -156,188 +218,89 @@ const ProductsScreen = () => {
     },
     [isMobile, saveCart, cartWindowAnim]
   );
-
-  // Function to change the quantity of an item in the cart
-  const changeQuantity = useCallback(
-    (index, change) => {
-      setCart((prevCart) => {
+    
+  const changeQuantity = useCallback((index, change) => {
+    setCart((prevCart) => {
         let newCart = [...prevCart];
         if (newCart[index]) {
-          newCart[index].quantity += change;
-          if (newCart[index].quantity <= 0) {
-            newCart.splice(index, 1); // Remove item if quantity is zero or less
-          }
+        newCart[index].quantity += change;
+        if (newCart[index].quantity <= 0) {
+            newCart.splice(index, 1);
         }
-        saveCart(newCart); // Save updated cart
+        }
+        saveCart(newCart);
         return newCart;
-      });
-    },
-    [saveCart]
-  );
+    });
+    }, [saveCart]);
 
-  // Function to remove an item from the cart
-  const removeItem = useCallback(
-    (index) => {
-      setCart((prevCart) => {
+  const removeItem = useCallback((index) => {
+    setCart((prevCart) => {
         const newCart = [...prevCart];
-        newCart.splice(index, 1); // Remove item by index
-        saveCart(newCart); // Save updated cart
+        newCart.splice(index, 1);
+        saveCart(newCart);
         return newCart;
-      });
-    },
-    [saveCart]
-  );
+    });
+    }, [saveCart]);
+    
+  const subtotal = useMemo(() => cart.reduce((total, p) => total + p.price * p.quantity, 0), [cart]);
+  const iva = useMemo(() => subtotal * 0.15, [subtotal]);
+  const total = useMemo(() => subtotal + iva, [subtotal, iva]);
 
-  // Computed properties for cart summary (subtotal, IVA, total)
-  const subtotal = useMemo(() => {
-    return cart.reduce(
-      (totalVal, product) => totalVal + product.price * product.quantity,
-      0
-    );
-  }, [cart]);
-
-  const iva = useMemo(() => {
-    return subtotal * 0.15;
-  }, [subtotal]);
-
-  const total = useMemo(() => {
-    return subtotal + iva;
-  }, [subtotal, iva]);
-
-  // Function to proceed to checkout, including stock validation
   const continueCheckout = useCallback(async () => {
     if (cart.length === 0) {
-      Alert.alert(
-        "Carrito Vacío",
-        "El carrito está vacío. Por favor, agrega productos antes de continuar."
-      );
+      Alert.alert("Carrito Vacío", "El carrito está vacío.");
       return;
     }
 
-    setLoading(true); // Set loading state to true
-    console.log("--- Iniciando validación de stock ---");
-    console.log("Carrito actual:", JSON.parse(JSON.stringify(cart)));
-
+    setLoading(true);
     try {
-      // Fetch all products from API again to get the most current stock data for validation
+      // Validamos stock con la nueva API. Asumimos que podemos obtener todos los productos
+      // para validar stock, ya que no hay un endpoint específico de validación de stock.
       const response = await axios.get(`${API_BASE_URL}/api/Producto`);
       const apiProducts = response.data;
-      console.log(
-        "Productos obtenidos de la API (para validación de stock):",
-        apiProducts
-      );
-
       let errors = [];
-      // Iterate through items in the cart and validate against current stock from API
+
       for (const cartItem of cart) {
-        console.log(
-          `Validando producto en carrito: ${cartItem.name}, Cantidad: ${cartItem.quantity}`
-        );
-
-        const apiProduct = apiProducts.find(
-          (p) => p.PROD_NOMBRE === cartItem.name
-        );
-
+        // Buscamos por el nombre del producto en el carrito (PROD_NOMBRE)
+        const apiProduct = apiProducts.find(p => p.PROD_NOMBRE === cartItem.name);
         if (!apiProduct) {
-          console.warn(`Producto no encontrado en la API: ${cartItem.name}`);
+          errors.push({ product: cartItem.name, message: "Producto no encontrado." });
+        } else if (cartItem.quantity > apiProduct.PROD_STOCK) {
           errors.push({
             product: cartItem.name,
-            message: "Producto no encontrado en el inventario de la tienda.",
+            message: `Stock insuficiente. Disponible: ${apiProduct.PROD_STOCK}.`,
           });
-        } else {
-          console.log(
-            `Producto API encontrado: ${apiProduct.PROD_NOMBRE}, Stock en API: ${apiProduct.PROD_STOCK}`
-          );
-          const availableStock = parseInt(apiProduct.PROD_STOCK);
-
-          if (isNaN(availableStock) || availableStock < 0) {
-            console.error(
-              `Stock inválido para ${cartItem.name}: ${apiProduct.PROD_STOCK}`
-            );
-            errors.push({
-              product: cartItem.name,
-              message: `El stock disponible del producto no es válido. Stock: ${apiProduct.PROD_STOCK}.`,
-            });
-          } else if (cartItem.quantity > availableStock) {
-            console.warn(
-              `Stock insuficiente para ${cartItem.name}. Solicitado: ${cartItem.quantity}, Disponible: ${availableStock}`
-            );
-            errors.push({
-              product: cartItem.name,
-              message: `Stock insuficiente. Disponible: ${availableStock}, solicitado: ${cartItem.quantity}.`,
-            });
-          } else {
-            console.log(`Stock OK para ${cartItem.name}.`);
-          }
         }
       }
 
-      // If there are any stock validation errors, alert the user
       if (errors.length > 0) {
-        let errorMessage = "Errores detectados en tu carrito:\n";
-        errors.forEach((error) => {
-          errorMessage += `- ${error.product}: ${error.message}\n`;
-        });
+        let errorMessage = "Errores en tu carrito:\n" + errors.map(e => `- ${e.product}: ${e.message}`).join("\n");
         Alert.alert("Error de Stock", errorMessage);
-        console.log("--- Validación de stock terminada con errores ---");
         return;
       }
 
-      console.log("--- Validación de stock exitosa ---");
-      const isAuthenticated =
-        (await AsyncStorage.getItem("isAuthenticated")) === "true";
-
-      // Redirect based on user login status
+      const isAuthenticated = (await AsyncStorage.getItem("isAuthenticated")) === "true";
       if (isAuthenticated) {
-        console.log("Usuario logueado. Redirigiendo a /screens/PaymentsScreen");
-        router.push("/screens/PaymentsScreen"); // Navigate to payments screen
+        router.push("/screens/PaymentsScreen");
       } else {
-        Alert.alert(
-          "Iniciar Sesión Requerido",
-          "Debes iniciar sesión para continuar."
-        );
-        console.log("Usuario no logueado. Redirigiendo a /screens/LogInScreen");
-        router.push("/screens/LogInScreen"); // Navigate to login screen
+        Alert.alert("Iniciar Sesión Requerido", "Debes iniciar sesión para continuar.");
+        router.push("/screens/LogInScreen");
       }
     } catch (error) {
-      console.error("Error general en continueCheckout:", error);
-      if (error.response) {
-        // Server responded with a status other than 2xx
-        Alert.alert(
-          "Error del Servidor",
-          `Error del servidor al validar stock: ${error.response.status} - ${
-            error.response.data.Message || "Mensaje desconocido"
-          }`
-        );
-      } else if (error.request) {
-        // Request was made but no response received
-        Alert.alert(
-          "Error de Conexión",
-          "No se pudo conectar con el servidor para validar el stock. Por favor, revisa tu conexión a internet."
-        );
-      } else {
-        // Something else happened while setting up the request
-        Alert.alert(
-          "Error",
-          "Error inesperado al preparar la validación de stock. Por favor, intenta nuevamente."
-        );
-      }
+      console.error("Error en continueCheckout:", error);
+      Alert.alert("Error", "No se pudo validar el stock. Intenta de nuevo.");
     } finally {
-      setLoading(false); // Set loading state to false
+      setLoading(false);
     }
   }, [cart, router]);
 
-  // Computed property for the total quantity of items in the cart (for bubble)
-  const totalCartQuantity = useMemo(() => {
-    return cart.reduce((totalVal, product) => totalVal + product.quantity, 0);
-  }, [cart]);
+  const totalCartQuantity = useMemo(() => cart.reduce((total, p) => total + p.quantity, 0), [cart]);
 
-  // Function to toggle the mobile cart window visibility
   const toggleCartWindow = useCallback(() => {
     setShowCartWindow((prev) => {
       const newState = !prev;
       Animated.timing(cartWindowAnim, {
-        toValue: newState ? 0 : width, // Slide in to 0, slide out to full width
+        toValue: newState ? 0 : width,
         duration: 300,
         easing: Easing.ease,
         useNativeDriver: true,
@@ -346,104 +309,64 @@ const ProductsScreen = () => {
     });
   }, [cartWindowAnim, width]);
 
-  // Effect for initial load and brand changes
   useEffect(() => {
-    loadCart(); // Load cart from storage on mount
-    fetchAllOrBrandProducts(); // Fetch products
-  }, [loadCart, fetchAllOrBrandProducts]); // Dependencies: ensure functions are stable
+    loadCart();
+    fetchAllOrBrandProducts();
+  }, [loadCart, fetchAllOrBrandProducts]);
 
-  // Effect to handle screen orientation/size changes for responsiveness
   useEffect(() => {
-    const updateDimensions = () => {
-      setIsMobile(Dimensions.get("window").width <= 768); // Update isMobile state
-    };
-    updateDimensions(); // Initial check
-
-    // Add event listener for dimension changes
-    const subscription = Dimensions.addEventListener(
-      "change",
-      updateDimensions
-    );
-
-    // Cleanup function to remove event listener
+    const updateDimensions = () => setIsMobile(Dimensions.get("window").width <= 768);
+    updateDimensions();
+    const subscription = Dimensions.addEventListener("change", updateDimensions);
     return () => subscription?.remove();
   }, []);
 
-  // Effect to hide mobile cart if not on mobile (e.g., orientation change to desktop)
   useEffect(() => {
     if (!isMobile) {
       setShowCartWindow(false);
-      Animated.timing(cartWindowAnim, {
-        toValue: width, // Ensure it's off-screen
-        duration: 0,
-        useNativeDriver: true,
-      }).start();
+      Animated.timing(cartWindowAnim, { toValue: width, duration: 0, useNativeDriver: true }).start();
     }
   }, [isMobile, cartWindowAnim, width]);
 
-  // Effect for mobile bubble visibility based on isMobile and totalCartQuantity
   useEffect(() => {
-    setShowMobileBubble(isMobile && totalCartQuantity > 0 && !showCartWindow); // Only show bubble if offcanvas is not open
+    setShowMobileBubble(isMobile && totalCartQuantity > 0 && !showCartWindow);
   }, [isMobile, totalCartQuantity, showCartWindow]);
 
-  // Determine dynamic styles based on window width
-  const responsiveContainerStyle =
-    width > 768 ? styles.mainContainerDesktop : styles.mainContainerMobile;
-  const responsiveProductGridStyle =
-    width > 768 ? styles.productsGridDesktop : styles.productsGridMobile;
-  const responsiveProductCardWidth =
-    width > 768
-      ? (width * 0.7 - 60 - 20 * 2) / 3 // Approx 3 columns on desktop (70% of screen, 60px padding, 20px gap)
-      : width > 480
-      ? (width - 40 - 20) / 2 // 2 columns on tablet (40px padding, 20px gap)
-      : "95%"; // Single column on small mobile
+  const responsiveContainerStyle = width > 768 ? styles.mainContainerDesktop : styles.mainContainerMobile;
+  const responsiveProductGridStyle = width > 768 ? styles.productsGridDesktop : styles.productsGridMobile;
+  const responsiveProductCardWidth = width > 768 ? (width * 0.7 - 60 - 20 * 2) / 3 : width > 480 ? (width - 40 - 20) / 2 : "95%";
 
   return (
     <View style={styles.productsPageWrapper}>
       <NavBarComponent isScrolled={isScrolled} />
-      {/* Main content ScrollView */}
       <ScrollView
-        style={styles.mainContentScrollView} // Apply new style here
+        style={styles.mainContentScrollView}
         onScroll={handleScroll}
-        scrollEventThrottle={16} // Optimize scroll performance
-        contentContainerStyle={styles.mainContentContainer} // Important for content sizing
+        scrollEventThrottle={16}
+        contentContainerStyle={styles.mainContentContainer}
       >
-        <View style={styles.navbarSpacer} /> {/* Spacer for fixed navbar */}
+        <View style={styles.navbarSpacer} />
         <View style={[styles.mainContainer, responsiveContainerStyle]}>
-          <View
-            style={[
-              styles.searchBarContainer,
-              isMobile && styles.searchBarContainerMobile,
-            ]}
-          >
+          <View style={[styles.searchBarContainer, isMobile && styles.searchBarContainerMobile]}>
             <TextInput
-              style={[
-                styles.productSearchInput,
-                isMobile && styles.productSearchInputMobile,
-              ]}
+              style={[styles.productSearchInput, isMobile && styles.productSearchInputMobile]}
               placeholder="Buscar productos por nombre..."
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholderTextColor="#888"
             />
-            {/* Cart Button for Mobile (Next to Search Bar) */}
             {isMobile && (
-              <Pressable
-                style={styles.inlineCartButton}
-                onPress={toggleCartWindow}
-              >
+              <Pressable style={styles.inlineCartButton} onPress={toggleCartWindow}>
                 <FontAwesome name="shopping-cart" size={24} color="#ffffff" />
                 {totalCartQuantity > 0 && (
-                  <Text style={styles.inlineCartQuantity}>
-                    {totalCartQuantity}
-                  </Text>
+                  <Text style={styles.inlineCartQuantity}>{totalCartQuantity}</Text>
                 )}
               </Pressable>
             )}
           </View>
 
           <View style={[styles.productsGrid, responsiveProductGridStyle]}>
-            {loading ? (
+            {loading && !products.length ? (
               <View style={styles.loaderContainer}>
                 <ActivityIndicator size="large" color="#A63700" />
                 <Text style={styles.loadingMessage}>Cargando productos...</Text>
@@ -454,29 +377,16 @@ const ProductsScreen = () => {
               </Text>
             ) : (
               filteredProducts.map((prod) => (
-                <View
-                  key={prod.PROD_ID}
-                  style={[
-                    styles.productCard,
-                    { width: responsiveProductCardWidth },
-                  ]}
-                >
+                <View key={prod.PROD_ID} style={[styles.productCard, { width: responsiveProductCardWidth }]}>
                   <View style={styles.productContent}>
                     <View style={styles.productInfo}>
                       <Text style={styles.productName}>{prod.PROD_NOMBRE}</Text>
-                      <Text style={styles.description}>
-                        {prod.PROD_DESCCORTA || prod.PROD_DESC}
-                      </Text>
-                      <Text style={styles.price}>
-                        ${parseFloat(prod.PROD_PRECIO).toFixed(2)}
-                      </Text>
+                      <Text style={styles.description}>{prod.PROD_DESCCORTA || prod.PROD_DESC}</Text>
+                      <Text style={styles.price}>${parseFloat(prod.PROD_PRECIO).toFixed(2)}</Text>
                     </View>
+                    {/* --- INTEGRACIÓN DEL CARRUSEL --- */}
                     <View style={styles.productImageContainer}>
-                      <Image
-                        source={{ uri: prod.PROD_IMG }}
-                        alt={prod.PROD_NOMBRE}
-                        style={styles.productImage}
-                      />
+                       <ProductImageCarousel images={prod.PROD_IMG} />
                     </View>
                   </View>
                   <Pressable
@@ -486,7 +396,7 @@ const ProductsScreen = () => {
                         prod.PROD_ID,
                         prod.PROD_NOMBRE,
                         parseFloat(prod.PROD_PRECIO).toFixed(2),
-                        prod.PROD_IMG
+                        prod.PROD_IMG // Se envía el array completo de imágenes al carrito
                       )
                     }
                   >
@@ -497,100 +407,43 @@ const ProductsScreen = () => {
             )}
           </View>
 
-          {/* Desktop Cart Sidebar */}
+          {/* Carrito de escritorio (sin cambios) */}
           {!isMobile && (
             <View style={styles.cartSidebar}>
-              <View style={styles.cartHeader}>
-                <Text style={styles.cartTitle}>Carrito</Text>
-              </View>
-              <ScrollView style={styles.productsInCart}>
-                {cart.length === 0 ? (
-                  <Text style={styles.cartEmptyText}>
-                    El carrito está vacío...
-                  </Text>
-                ) : (
-                  cart.map((product, index) => (
+                <View style={styles.cartHeader}><Text style={styles.cartTitle}>Carrito</Text></View>
+                <ScrollView style={styles.productsInCart}>
+                {cart.length === 0 ? (<Text style={styles.cartEmptyText}>El carrito está vacío...</Text>) : (
+                    cart.map((product, index) => (
                     <View key={product.id} style={styles.productInCart}>
-                      <View style={styles.productCartImageWrapper}>
-                        <Image
-                          source={{ uri: product.image }}
-                          alt={product.name}
-                          style={styles.productCartImage}
-                        />
-                      </View>
-                      <View style={styles.productDetails}>
-                        <Text style={styles.productNameInCart}>
-                          {product.name}
-                        </Text>
-                        <Text>
-                          ${(product.price * product.quantity).toFixed(2)}
-                        </Text>
+                        <View style={styles.productCartImageWrapper}><Image source={{ uri: product.image }} alt={product.name} style={styles.productCartImage} /></View>
+                        <View style={styles.productDetails}>
+                        <Text style={styles.productNameInCart}>{product.name}</Text>
+                        <Text>${(product.price * product.quantity).toFixed(2)}</Text>
                         <View style={styles.itemActions}>
-                          <Pressable
-                            style={styles.deleteItem}
-                            onPress={() => removeItem(index)}
-                          >
-                            <FontAwesome
-                              name="trash-o"
-                              size={18}
-                              color="#A60000"
-                            />
-                          </Pressable>
-                          <View style={styles.quantityControls}>
-                            <Pressable
-                              style={styles.decreaseQuantity}
-                              onPress={() => changeQuantity(index, -1)}
-                            >
-                              <Text style={styles.quantityControlText}>-</Text>
-                            </Pressable>
-                            <Text style={styles.quantityDisplay}>
-                              {product.quantity}
-                            </Text>
-                            <Pressable
-                              style={styles.increaseQuantity}
-                              onPress={() => changeQuantity(index, 1)}
-                            >
-                              <Text style={styles.quantityControlText}>+</Text>
-                            </Pressable>
-                          </View>
+                            <Pressable style={styles.deleteItem} onPress={() => removeItem(index)}><FontAwesome name="trash-o" size={18} color="#A60000" /></Pressable>
+                            <View style={styles.quantityControls}>
+                            <Pressable style={styles.decreaseQuantity} onPress={() => changeQuantity(index, -1)}><Text style={styles.quantityControlText}>-</Text></Pressable>
+                            <Text style={styles.quantityDisplay}>{product.quantity}</Text>
+                            <Pressable style={styles.increaseQuantity} onPress={() => changeQuantity(index, 1)}><Text style={styles.quantityControlText}>+</Text></Pressable>
+                            </View>
                         </View>
-                      </View>
+                        </View>
                     </View>
-                  ))
+                    ))
                 )}
-              </ScrollView>
-              <View style={styles.summary}>
-                <View style={styles.summaryRow}>
-                  <Text>Subtotal</Text>
-                  <Text>${subtotal.toFixed(2)}</Text>
+                </ScrollView>
+                <View style={styles.summary}>
+                    <View style={styles.summaryRow}><Text>Subtotal</Text><Text>${subtotal.toFixed(2)}</Text></View>
+                    <View style={styles.summaryRow}><Text>IVA</Text><Text>${iva.toFixed(2)}</Text></View>
+                    <View style={[styles.summaryRow, styles.totalRow]}><Text style={styles.totalText}>Total</Text><Text style={styles.totalText}>${total.toFixed(2)}</Text></View>
+                    <Pressable style={({ pressed }) => [styles.continueButton, cart.length === 0 && styles.continueButtonDisabled, pressed && styles.continueButtonPressed,]} onPress={continueCheckout} disabled={cart.length === 0}><Text style={styles.continueButtonText}>Continuar</Text></Pressable>
                 </View>
-                <View style={styles.summaryRow}>
-                  <Text>IVA</Text>
-                  <Text>${iva.toFixed(2)}</Text>
-                </View>
-                <View style={[styles.summaryRow, styles.totalRow]}>
-                  <Text style={styles.totalText}>Total</Text>
-                  <Text style={styles.totalText}>${total.toFixed(2)}</Text>
-                </View>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.continueButton,
-                    cart.length === 0 && styles.continueButtonDisabled,
-                    pressed && styles.continueButtonPressed,
-                  ]}
-                  onPress={continueCheckout}
-                  disabled={cart.length === 0}
-                >
-                  <Text style={styles.continueButtonText}>Continuar</Text>
-                </Pressable>
-              </View>
             </View>
           )}
         </View>
-        <FooterComponent /> {/* Footer is part of the main ScrollView */}
+        <FooterComponent />
       </ScrollView>
 
-      {/* Mobile Cart Bubble (Only show if offcanvas is NOT open) */}
       {showMobileBubble && (
         <Pressable style={styles.cartBubble} onPress={toggleCartWindow}>
           <FontAwesome name="shopping-cart" size={28} color="#ffffff" />
@@ -598,605 +451,323 @@ const ProductsScreen = () => {
         </Pressable>
       )}
 
-      {/* Loading Overlay */}
       {loading && (
         <View style={styles.loaderOverlay}>
           <ActivityIndicator size="large" color="#A63700" />
-          <Text style={styles.loadingMessage}>Cargando productos...</Text>
+          <Text style={styles.loadingMessage}>Validando...</Text>
         </View>
       )}
 
-      {/* Mobile Cart Offcanvas Window */}
-      {isMobile &&
-        showCartWindow && ( // Only render overlay if cart is visible and on mobile
-          <Animated.View
-            style={[
-              styles.cartWindowOverlay,
-              {
-                opacity: cartWindowAnim.interpolate({
-                  inputRange: [0, width], // From fully visible to fully hidden
-                  outputRange: [1, 0],
-                }),
-              },
-            ]}
-            // Prevent closing when clicking inside the cart content itself
-            onStartShouldSetResponder={() => true}
-            onResponderRelease={() => {}}
-          >
-            {/* Backdrop for closing */}
-            <Pressable
-              style={styles.cartWindowBackdrop}
-              onPress={toggleCartWindow}
-            />
-            <Animated.View
-              style={[
-                styles.cartWindowContent,
-                { transform: [{ translateX: cartWindowAnim }] },
-              ]}
-            >
-              <View style={styles.cartWindowHeader}>
-                <Text style={styles.cartWindowTitle}>Tu Carrito</Text>
-                <Pressable
-                  style={styles.closeButton}
-                  onPress={toggleCartWindow}
-                >
-                  <FontAwesome name="times" size={28} color="#664400" />
-                </Pressable>
-              </View>
-              {/* Product list that scrolls independently */}
-              <ScrollView
-                style={styles.productsInCartPopup}
-                contentContainerStyle={styles.productsInCartPopupContent}
-              >
-                {cart.length === 0 ? (
-                  <Text style={styles.cartEmptyText}>
-                    El carrito está vacío...
-                  </Text>
-                ) : (
-                  cart.map((product, index) => (
+      {/* Carrito móvil (sin cambios) */}
+      {isMobile && showCartWindow && (
+        <Animated.View style={[styles.cartWindowOverlay, { opacity: cartWindowAnim.interpolate({ inputRange: [0, width], outputRange: [1, 0], }) }]} onStartShouldSetResponder={() => true} onResponderRelease={() => {}}>
+          <Pressable style={styles.cartWindowBackdrop} onPress={toggleCartWindow} />
+          <Animated.View style={[ styles.cartWindowContent, { transform: [{ translateX: cartWindowAnim }] },]}>
+            <View style={styles.cartWindowHeader}>
+              <Text style={styles.cartWindowTitle}>Tu Carrito</Text>
+              <Pressable style={styles.closeButton} onPress={toggleCartWindow}><FontAwesome name="times" size={28} color="#664400" /></Pressable>
+            </View>
+            <ScrollView style={styles.productsInCartPopup} contentContainerStyle={styles.productsInCartPopupContent}>
+              {cart.length === 0 ? (<Text style={styles.cartEmptyText}>El carrito está vacío...</Text>) : (
+                cart.map((product, index) => (
                     <View key={product.id} style={styles.productInCart}>
-                      <View style={styles.productCartImageWrapper}>
-                        <Image
-                          source={{ uri: product.image }}
-                          alt={product.name}
-                          style={styles.productCartImage}
-                        />
-                      </View>
-                      <View style={styles.productDetails}>
-                        <Text style={styles.productNameInCart}>
-                          {product.name}
-                        </Text>
-                        <Text>
-                          ${(product.price * product.quantity).toFixed(2)}
-                        </Text>
+                        <View style={styles.productCartImageWrapper}><Image source={{ uri: product.image }} alt={product.name} style={styles.productCartImage} /></View>
+                        <View style={styles.productDetails}>
+                        <Text style={styles.productNameInCart}>{product.name}</Text>
+                        <Text>${(product.price * product.quantity).toFixed(2)}</Text>
                         <View style={styles.itemActions}>
-                          <Pressable
-                            style={styles.deleteItem}
-                            onPress={() => removeItem(index)}
-                          >
-                            <FontAwesome
-                              name="trash-o"
-                              size={18}
-                              color="#A60000"
-                            />
-                          </Pressable>
-                          <View style={styles.quantityControls}>
-                            <Pressable
-                              style={styles.decreaseQuantity}
-                              onPress={() => changeQuantity(index, -1)}
-                            >
-                              <Text style={styles.quantityControlText}>-</Text>
-                            </Pressable>
-                            <Text style={styles.quantityDisplay}>
-                              {product.quantity}
-                            </Text>
-                            <Pressable
-                              style={styles.increaseQuantity}
-                              onPress={() => changeQuantity(index, 1)}
-                            >
-                              <Text style={styles.quantityControlText}>+</Text>
-                            </Pressable>
-                          </View>
+                            <Pressable style={styles.deleteItem} onPress={() => removeItem(index)}><FontAwesome name="trash-o" size={18} color="#A60000" /></Pressable>
+                            <View style={styles.quantityControls}>
+                            <Pressable style={styles.decreaseQuantity} onPress={() => changeQuantity(index, -1)}><Text style={styles.quantityControlText}>-</Text></Pressable>
+                            <Text style={styles.quantityDisplay}>{product.quantity}</Text>
+                            <Pressable style={styles.increaseQuantity} onPress={() => changeQuantity(index, 1)}><Text style={styles.quantityControlText}>+</Text></Pressable>
+                            </View>
                         </View>
-                      </View>
+                        </View>
                     </View>
-                  ))
-                )}
-              </ScrollView>
-              {/* Summary and Checkout Button (Fixed at bottom) */}
-              <View style={styles.summary}>
-                <View style={styles.summaryRow}>
-                  <Text>Subtotal</Text>
-                  <Text>${subtotal.toFixed(2)}</Text>
-                </View>
-                <View style={styles.summaryRow}>
-                  <Text>IVA</Text>
-                  <Text>${iva.toFixed(2)}</Text>
-                </View>
-                <View style={[styles.summaryRow, styles.totalRow]}>
-                  <Text style={styles.totalText}>Total</Text>
-                  <Text style={styles.totalText}>${total.toFixed(2)}</Text>
-                </View>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.continueButton,
-                    cart.length === 0 && styles.continueButtonDisabled,
-                    pressed && styles.continueButtonPressed,
-                  ]}
-                  onPress={continueCheckout}
-                  disabled={cart.length === 0}
-                >
-                  <Text style={styles.continueButtonText}>Continuar</Text>
-                </Pressable>
-              </View>
-            </Animated.View>
+                ))
+              )}
+            </ScrollView>
+            <View style={styles.summary}>
+                <View style={styles.summaryRow}><Text>Subtotal</Text><Text>${subtotal.toFixed(2)}</Text></View>
+                <View style={styles.summaryRow}><Text>IVA</Text><Text>${iva.toFixed(2)}</Text></View>
+                <View style={[styles.summaryRow, styles.totalRow]}><Text style={styles.totalText}>Total</Text><Text style={styles.totalText}>${total.toFixed(2)}</Text></View>
+                <Pressable style={({ pressed }) => [styles.continueButton, cart.length === 0 && styles.continueButtonDisabled, pressed && styles.continueButtonPressed,]} onPress={continueCheckout} disabled={cart.length === 0}><Text style={styles.continueButtonText}>Continuar</Text></Pressable>
+            </View>
           </Animated.View>
-        )}
+        </Animated.View>
+      )}
     </View>
   );
 };
 
+// --- ESTILOS: AGREGAR ESTILOS PARA EL CARRUSEL ---
 const styles = StyleSheet.create({
-  productsPageWrapper: {
-    flex: 1,
-    backgroundColor: "#FFF2E0",
-    // position: 'relative', // Ensure this is the positioning context for absolute children
-  },
-  mainContentScrollView: {
-    // New style for the main scrollable content
-    flex: 1,
-  },
-  mainContentContainer: {
-    // Important for content sizing in ScrollView
-    flexGrow: 1, // Ensures content takes full height if not enough items
-  },
-  navbarSpacer: {
-    height: 80, // Approximate height of NavBarComponent (6em approx from Vue CSS)
-    backgroundColor: "transparent",
-  },
-  // Main container layout based on screen size
+  // ... (Tus estilos existentes van aquí, no los borres)
+  productsPageWrapper: { flex: 1, backgroundColor: "#FFFBF5" },
+  mainContentScrollView: { flex: 1 },
+  mainContentContainer: { alignItems: "center" },
+  navbarSpacer: { height: 80 },
   mainContainer: {
-    padding: 20, // 2em
-    gap: 20, // 2em
-    maxWidth: 1400,
-    width: "100%",
-    alignSelf: "center",
-    flexGrow: 1,
-  },
-  mainContainerDesktop: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    justifyContent: "center",
+    width: "100%",
+    maxWidth: 1400,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
-  mainContainerMobile: {
-    flexDirection: "column",
-  },
+  mainContainerDesktop: { padding: 30 },
+  mainContainerMobile: { flexDirection: "column", padding: 10 },
   searchBarContainer: {
     width: "100%",
-    marginBottom: 20,
-    zIndex: 1, // Ensure search bar is visible
-  },
-  searchBarContainerMobile: {
-    flexDirection: "row", // Arrange search input and button horizontally
+    paddingVertical: 20,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between", // Space them out
-    gap: 10, // Gap between search input and button
   },
+  searchBarContainerMobile: { paddingVertical: 10 },
   productSearchInput: {
-    flex: 1, // Allow search input to take available space
-    paddingVertical: 12,
-    paddingHorizontal: 15,
-    fontSize: 18, // 1.1em
+    flex: 1,
+    height: 45,
+    borderColor: "#D3C3A2",
     borderWidth: 1,
-    borderColor: "#e0e0e0",
-    borderRadius: 8,
-    backgroundColor: "#ffffff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    fontSize: 16,
+    backgroundColor: "#fff",
   },
-  productSearchInputMobile: {
-    marginRight: 0, // Reset margin
+  productSearchInputMobile: { height: 50 },
+  inlineCartButton: {
+    marginLeft: 10,
+    padding: 10,
+    backgroundColor: "#A63700",
+    borderRadius: 25,
+    position: "relative",
   },
-  // Products Grid Layout
+  inlineCartQuantity: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#fff',
+    color: '#A63700',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    textAlign: 'center',
+    lineHeight: 20,
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
   productsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-around", // Distribute items evenly
-    gap: 20, // 2em
-    paddingVertical: 10, // 1em
-    flexGrow: 1,
+    justifyContent: "flex-start",
+    gap: 20,
   },
-  productsGridDesktop: {
-    flex: 3, // Takes 3 parts of space
-    justifyContent: "flex-start", // Start aligning products from left
-    paddingRight: 20, // Space before sidebar
+  productsGridDesktop: { flex: 0.7, paddingRight: 30 },
+  productsGridMobile: { width: "100%", justifyContent: "center" },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
+    height: 300,
   },
-  productsGridMobile: {
-    justifyContent: "center", // Center cards on mobile
-    gap: 10, // Smaller gap on mobile
-  },
+  loadingMessage: { marginTop: 10, fontSize: 16, color: "#664400" },
   noProductsMessage: {
-    width: "100%", // Span full width
-    fontSize: 24, // 1.5em
-    color: "#664400",
-    padding: 40, // 2em
+    width: "100%",
     textAlign: "center",
+    marginTop: 50,
+    fontSize: 18,
+    color: "#888",
   },
-  // Product Card Styling
   productCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 15,
-    elevation: 5,
-    flexDirection: "column",
-    justifyContent: "space-between",
-    minHeight: 300,
-    position: "relative",
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    aspectRatio: 0.8, // Maintain aspect ratio for uniform cards
-    marginBottom: 120, // Added margin for spacing between rows
-  },
-  productContent: {
-    flexDirection: "column",
-    flex: 1, // Allow content to grow
-    paddingBottom: 50, // Space for the add-to-cart button
-  },
-  productInfo: {
-    padding: 15, // 1.5em
-    flexGrow: 1,
-  },
-  productName: {
-    // fontFamily: 'DynaPuff', // Not a standard RN font, remove or replace
-    fontSize: 24, // 1.5em
-    color: "#A63700",
-    marginBottom: 8, // 0.5em
-    fontWeight: "bold",
-  },
-  description: {
-    fontSize: 15, // 0.95em
-    color: "#333333",
-    lineHeight: 21, // 1.4
-    marginBottom: 10, // 1em
-    flexGrow: 1,
-  },
-  price: {
-    fontSize: 22, // 1.4em
-    fontWeight: "bold",
-    color: "#664400",
-    marginTop: 10, // 1em
-  },
-  productImageContainer: {
-    width: "100%",
-    height: 150,
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 15,
     overflow: "hidden",
-    backgroundColor: "#ffffff",
-  },
-  productImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "contain",
-  },
-  addToCartButton: {
-    position: "absolute",
-    bottom: 15,
-    right: 15,
-    backgroundColor: "#A63700",
-    borderRadius: 25, // 50% for circle
-    width: 50,
-    height: 50,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  // Cart Sidebar Styling (Desktop)
-  cartSidebar: {
-    flex: 1, // Takes 1 part of space on desktop
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 15,
-    elevation: 5,
-    padding: 15, // 1.5em
-    maxHeight: "10%", // Adjusted for RN to prevent overflowing parent
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-  },
-  cartHeader: {
-    marginBottom: 15, // 1.5em
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-    paddingBottom: 10,
-  },
-  cartTitle: {
-    // fontFamily: 'DynaPuff', // Not a standard RN font
-    color: "#A63700",
-    textAlign: "center",
-    fontSize: 28, // 1.8em
-    fontWeight: "bold",
-  },
-  productsInCart: {
-    flexGrow: 1, // Allow this section to grow
-    marginBottom: 15, // 1.5em
-  },
-  cartEmptyText: {
-    textAlign: "center",
-    fontSize: 18, // 1.1em
-    color: "gray",
-    paddingVertical: 10, // 1em
-  },
-  productInCart: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10, // 1em
-    marginBottom: 10, // 1em
-    paddingBottom: 10, // 1em
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-    borderStyle: "dashed",
-  },
-  productCartImageWrapper: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    padding: 5,
-    backgroundColor: "#f9f9f9",
-    overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  productCartImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "contain",
-  },
-  productDetails: {
-    flexGrow: 1,
-  },
-  productNameInCart: {
-    fontWeight: "bold",
-    fontSize: 16, // 1em
-    color: "#664400",
-    marginBottom: 2,
-  },
-  itemActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8, // 0.8em
-    marginTop: 5, // 0.5em
-  },
-  deleteItem: {
-    padding: 5, // 0.2em
-  },
-  quantityControls: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5, // 0.5em
-    backgroundColor: "#f0f0f0",
-    borderRadius: 5,
-    paddingVertical: 2, // 0.2em
-    paddingHorizontal: 5, // 0.5em
-  },
-  decreaseQuantity: {
-    backgroundColor: "#A63700",
-    borderRadius: 4,
-    width: 25,
-    height: 25,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  increaseQuantity: {
-    backgroundColor: "#A63700",
-    borderRadius: 4,
-    width: 25,
-    height: 25,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  quantityControlText: {
-    color: "#ffffff",
-    fontSize: 16, // 1em
-    fontWeight: "bold",
-  },
-  quantityDisplay: {
-    fontWeight: "bold",
-    fontSize: 18, // 1.1em
-    color: "#333333",
-    minWidth: 20,
-    textAlign: "center",
-  },
-  summary: {
-    borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
-    paddingTop: 15, // 1.5em
-  },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8, // 0.8em
-    fontSize: 18, // 1.1em
-  },
-  totalRow: {
-    marginBottom: 0,
-  },
-  totalText: {
-    fontWeight: "bold",
-    fontSize: 21, // 1.3em
-    color: "#664400",
-  },
-  continueButton: {
-    width: "100%",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: "#1a7d3a",
-    borderRadius: 8,
-    marginTop: 10, // 1em
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  continueButtonText: {
-    color: "#ffffff",
-    fontSize: 18, // 1.1em
-    fontWeight: "bold",
-  },
-  continueButtonDisabled: {
-    backgroundColor: "#cccccc",
-    opacity: 0.7,
-  },
-  continueButtonPressed: {
-    backgroundColor: "#166a31",
-  },
-
-  // Cart Bubble (Mobile, bottom-right floating)
-  cartBubble: {
-    position: "absolute",
-    bottom: 20,
-    right: 20,
-    backgroundColor: "#A63700",
-    borderRadius: 30, // 50%
-    width: 60,
-    height: 60,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
-    zIndex: 900,
-  },
-  cartQuantity: {
-    position: "absolute",
-    top: -5,
-    right: -5,
-    backgroundColor: "#A60000",
-    color: "#ffffff",
-    borderRadius: 15, // 50% for circle
-    paddingHorizontal: 8, // 0.5em
-    paddingVertical: 3, // 0.2em
-    fontSize: 12, // 0.6em
-    fontWeight: "bold",
-    minWidth: 20,
-    textAlign: "center",
-  },
-  // New: Inline cart button for mobile (next to search bar)
-  inlineCartButton: {
-    backgroundColor: "#A63700", // Match theme
-    borderRadius: 25,
-    width: 50,
-    height: 50,
-    justifyContent: "center",
-    alignItems: "center",
+    elevation: 3,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowRadius: 4,
+    position: "relative",
   },
-  inlineCartQuantity: {
-    position: "absolute",
-    top: -5,
-    right: -5,
-    backgroundColor: "#A60000",
-    color: "#ffffff",
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    fontSize: 10,
-    fontWeight: "bold",
-    minWidth: 18,
-    textAlign: "center",
-  },
-
-  // Mobile Cart Offcanvas Window
-  cartWindowOverlay: {
-    // This is the full-screen overlay for the cart
-    position: "absolute", // Make it fixed to the viewport
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.6)", // Dim background
-    zIndex: 1000,
-    flexDirection: "row", // Important for positioning content to the right
-    justifyContent: "flex-end", // Pushes the cart content to the right
-  },
-  cartWindowBackdrop: {
-    // Added separate backdrop for clickable area
-    flex: 1, // Takes up remaining space
-  },
-  cartWindowContent: {
-    backgroundColor: "#ffffff",
-    width: "85%", // 85% of screen width
-    maxWidth: 400, // Max width for larger screens (if mobile view stretches)
-    height: "100%", // Take full height of the overlay
-    shadowColor: "#000",
-    shadowOffset: { width: -5, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 15,
-    elevation: 10,
-    padding: 15, // 1.5em
-    flexDirection: "column", // Arrange header, scrollable, summary vertically
-    flex: 0, // This is key: let it shrink to content, but it will be full height due to parent flex row
-    // Reverted to 0 to prevent it from taking extra space if not needed,
-    // The width and height ensure it's constrained correctly.
-  },
-  cartWindowHeader: {
+  productContent: {
     flexDirection: "row",
+    padding: 15,
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15, // 1.5em
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-    paddingBottom: 10, // 1em
+    flex: 1,
   },
-  cartWindowTitle: {
-    // fontFamily: 'DynaPuff', // Not a standard RN font
+  productInfo: { flex: 1, marginRight: 10 },
+  productName: { fontSize: 18, fontWeight: "bold", color: "#664400" },
+  description: { fontSize: 14, color: "#777", marginVertical: 5 },
+  price: { fontSize: 18, fontWeight: "bold", color: "#A63700", marginTop: "auto" },
+  productImageContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  productImage: { width: "100%", height: "100%" }, // Este estilo lo usa ProductImageCarousel para el placeholder
+  addToCartButton: {
+    position: "absolute",
+    bottom: 10,
+    right: 10,
+    backgroundColor: "#A63700",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cartSidebar: {
+    flex: 0.3,
+    backgroundColor: "#FFFDF9",
+    borderRadius: 15,
+    padding: 20,
+    height: "fit-content",
+    maxHeight: '80vh',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  cartHeader: { borderBottomWidth: 1, borderBottomColor: "#E0D6C3", paddingBottom: 10, marginBottom: 10 },
+  cartTitle: { fontSize: 22, fontWeight: "bold", color: "#664400" },
+  productsInCart: { flex: 1 },
+  cartEmptyText: { textAlign: "center", color: "#888", marginTop: 20 },
+  productInCart: {
+    flexDirection: "row",
+    marginBottom: 15,
+    alignItems: "center",
+  },
+  productCartImageWrapper: { width: 60, height: 60, borderRadius: 8, overflow: 'hidden', marginRight: 10 },
+  productCartImage: { width: "100%", height: "100%" },
+  productDetails: { flex: 1, justifyContent: "center" },
+  productNameInCart: { fontWeight: "bold", color: "#664400" },
+  itemActions: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 5 },
+  deleteItem: { padding: 5 },
+  quantityControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E0D6C3",
+    borderRadius: 15,
+  },
+  decreaseQuantity: { paddingHorizontal: 10, paddingVertical: 2 },
+  increaseQuantity: { paddingHorizontal: 10, paddingVertical: 2 },
+  quantityControlText: { fontSize: 18, color: "#A63700" },
+  quantityDisplay: { paddingHorizontal: 12, fontSize: 16, borderLeftWidth: 1, borderRightWidth: 1, borderColor: "#E0D6C3"},
+  summary: { marginTop: "auto", borderTopWidth: 1, borderTopColor: "#E0D6C3", paddingTop: 10 },
+  summaryRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 5 },
+  totalRow: { borderTopWidth: 1, borderTopColor: "#E0D6C3", paddingTop: 5, marginTop: 5 },
+  totalText: { fontWeight: "bold", fontSize: 18 },
+  continueButton: {
+    backgroundColor: "#A63700",
+    padding: 15,
+    borderRadius: 30,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  continueButtonDisabled: { backgroundColor: "#C8A68F" },
+  continueButtonPressed: { backgroundColor: "#852b00" },
+  continueButtonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  cartBubble: {
+    position: "absolute",
+    bottom: 30,
+    right: 30,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#A63700",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+  },
+  cartQuantity: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    backgroundColor: "#fff",
     color: "#A63700",
-    fontSize: 28, // 1.8em
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    textAlign: "center",
+    lineHeight: 20,
     fontWeight: "bold",
   },
-  closeButton: {
-    padding: 5,
-  },
-  productsInCartPopup: {
-    flex: 1, // Crucial: This makes the ScrollView take up available space, allowing only its content to scroll
-  },
-  productsInCartPopupContent: {
-    paddingBottom: 20, // Add some padding at the bottom of the scrollable area
-  },
-
-  // Loader Styling
   loaderOverlay: {
     position: "absolute",
     top: 0,
     left: 0,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 1001,
+    zIndex: 10,
   },
-  loadingMessage: {
-    fontSize: 18, // 1.2em
-    color: "#664400",
-    marginTop: 10, // 1em
+  cartWindowOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 20,
+  },
+  cartWindowBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  cartWindowContent: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: "85%",
+    maxWidth: 350,
+    backgroundColor: "#FFFDF9",
+    flexDirection: "column",
+  },
+  cartWindowHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0D6C3',
+  },
+  cartWindowTitle: { fontSize: 20, fontWeight: 'bold', color: '#664400' },
+  closeButton: { padding: 5 },
+  productsInCartPopup: { flex: 1, padding: 15 },
+  productsInCartPopupContent: { paddingBottom: 20 },
+  
+  // --- NUEVOS ESTILOS PARA EL CARRUSEL ---
+  carouselContainer: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+  },
+  carouselScrollView: {
+    width: '100%',
+    height: '100%',
+  },
+  paginationContainer: {
+    position: 'absolute',
+    bottom: 5,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    marginHorizontal: 3,
+  },
+  paginationDotActive: {
+    backgroundColor: '#ffffff',
   },
 });
 

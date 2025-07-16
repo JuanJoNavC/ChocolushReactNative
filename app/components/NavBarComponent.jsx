@@ -96,7 +96,7 @@ const NavBarComponent = ({ isScrolled }) => { // Receive isScrolled as prop
               <DefaultButton text="Brands" onPress={() => router.push('/screens/BrandsScreen')} />
             </View>
             <View style={navStyles.navItem}>
-              <DefaultButton text="Productos" onPress={() => router.push('/screens/ProductsScreen')} />
+              <DefaultButton text="Productos" onPress={() => router.push('screens/ProductsScreen')} />
             </View>
           </View>
         )}
