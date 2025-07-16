@@ -15,6 +15,7 @@ import axios from "axios";
 import { Picker } from "@react-native-picker/picker"; // For dropdown
 import DateTimePicker from "@react-native-community/datetimepicker"; // For date picker
 import NavBarComponent from "../components/NavBarComponent"; // Assuming you have a NavBarComponent for React Native
+import FooterComponent from "../components/FooterComponent"; // Assuming you have a FooterComponent for React Native
 
 // You'll need to set your API_BASE_URL.
 // For React Native, you might use an environment file or directly define it.
@@ -366,6 +367,7 @@ const RegisterClientScreen = ({ navigation }) => {
             </Text>
           </View>
         </View>
+        <FooterComponent />
       </ScrollView>
     </View>
   );
