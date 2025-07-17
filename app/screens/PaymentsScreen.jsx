@@ -323,7 +323,8 @@ const PaymentsScreen = () => {
             {/* Section 1: Cart Summary */}
             <View style={styles.datosPago1}>
               <Text style={styles.sectionTitle}>Resumen del Carrito</Text>
-              <View style={styles.productosCarrito}>
+              {/* Nuevo ScrollView para los productos del carrito */}
+              <ScrollView style={styles.productosCarritoScroll}> {/* <-- Nuevo ScrollView aquí */}
                 {carrito.length === 0 ? (
                   <Text style={styles.carritoVacioMensaje}>
                     Tu carrito está vacío. Agrega productos para continuar.
@@ -352,7 +353,7 @@ const PaymentsScreen = () => {
                     </View>
                   ))
                 )}
-              </View>
+              </ScrollView> {/* <-- Cierre del nuevo ScrollView */}
               <View style={styles.resumen}>
                 <View style={styles.resumenRow}>
                   <Text style={styles.resumenLabel}>Subtotal</Text>
@@ -564,7 +565,10 @@ const styles = StyleSheet.create({
     borderTopColor: "#e0e0e0",
     paddingTop: 10,
     marginTop: 10,
-    maxHeight: 400,
+  },
+  productosCarritoScroll: { // Nuevo estilo para el ScrollView
+    maxHeight: 300, // Ajusta este valor según cuánto espacio quieres que ocupe la lista de productos
+    marginBottom: 10, // Un poco de espacio antes del resumen de totales
   },
   carritoVacioMensaje: {
     textAlign: "center",

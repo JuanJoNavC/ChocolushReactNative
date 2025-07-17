@@ -57,6 +57,13 @@ const LogInScreen = () => {
     try {
       console.log("User data entered:", { email: email, password: password });
 
+      
+        // **NUEVO: Eliminar datos de sesión anteriores antes de guardar los nuevos**
+        await AsyncStorage.removeItem("userEmail");
+        await AsyncStorage.removeItem("isAuthenticated");
+        await AsyncStorage.removeItem("userRole");
+
+        
       const response = await axios.get(
         `${API_BASE_URL}/api/cliente/correo?correo=${email}`
       );

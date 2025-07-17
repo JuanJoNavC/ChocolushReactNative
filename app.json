@@ -15,7 +15,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nicog20.ChocolushReactNative",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +27,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.jjnavarretec.ChocolushReactNative"
+      "package": "com.nicog20.ChocolushReactNative"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -34,8 +38,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "c2603279-84fd-4697-8c2d-690a4c722860"
+        "projectId": "ef97f93b-62e5-4abc-adbc-f1a9afc4c288"
       }
-    }
+    },
+    "owner": "nicog20"
   }
 }

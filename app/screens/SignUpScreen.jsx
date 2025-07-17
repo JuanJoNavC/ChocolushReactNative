@@ -81,6 +81,15 @@ const RegisterClientScreen = ({ navigation }) => {
     return "";
   };
 
+  const validateEmail = (email) => {
+    // Expresión regular para validar formato de email: algo@algo.algo
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return "Formato de correo electrónico inválido (ej. usuario@dominio.com).";
+    }
+    return "";
+  };
+
   const registerClient = async () => {
     setIsSubmitting(true);
     setFormMessage({ type: "", text: "" });
@@ -92,6 +101,9 @@ const RegisterClientScreen = ({ navigation }) => {
 
     const ageError = validateAge(client.CLI_FECHANACIMIENTO);
     if (ageError) validationErrors.push(ageError);
+      // NUEVO: Validación de Correo Electrónico
+    const emailError = validateEmail(client.CLI_CORREO);
+    if (emailError) validationErrors.push(emailError);
 
     if (client.CLI_CLAVE !== confirmPassword) {
       validationErrors.push("Las contraseñas no coinciden.");

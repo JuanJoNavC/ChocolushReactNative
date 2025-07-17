@@ -22,7 +22,7 @@ import { FontAwesome } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
 // Cambiamos la URL base para apuntar a la nueva API de productos
-const API_BASE_URL = "http://backendchocolush.runasp.net";
+const API_BASE_URL = "https://backendchocolush.runasp.net";
 
 // --- NUEVO COMPONENTE DE CARRUSEL DE IMÁGENES ---
 const ProductImageCarousel = ({ images }) => {
